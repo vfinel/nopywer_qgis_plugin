@@ -234,17 +234,36 @@ class NopywerPlugin:
         print(f"ANALYSIS TRIGGERED")
         print("=" * 40)
 
+        # Validation requirements
+        load_req = ["name", "power"]
+        cable_req = ["area", "plugs&sockets"]
+
         print(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
         for layer in load_layers:
-            self.print_layer_data(layer)
+            missing = self.validate_layer_fields(layer, load_req)
+            if missing:
+                print(f" [!] ERROR: Layer '{layer.name()}' is missing fields: {missing}")
+            else:
+                print(f" [OK] Layer '{layer.name()}' has all required fields.")
+                self.print_layer_data(layer)
 
         print(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
         for layer in cable_layers:
-            self.print_layer_data(layer)
+            missing = self.validate_layer_fields(layer, cable_req)
+            if missing:
+                print(f" [!] ERROR: Layer '{layer.name()}' is missing fields: {missing}")
+            else:
+                print(f" [OK] Layer '{layer.name()}' has all required fields.")
+                self.print_layer_data(layer)
 
         print("\n" + "=" * 40)
         print("ANALYSIS PREVIEW FINISHED")
         print("=" * 40)
+
+    def validate_layer_fields(self, layer, required_fields):
+        """Checks if a layer contains all required fields. Returns list of missing fields."""
+        current_fields = [f.name() for f in layer.fields()]
+        return [f for f in required_fields if f not in current_fields]
 
     def print_layer_data(self, layer):
         """Prints all fields and feature attributes for a given layer."""
