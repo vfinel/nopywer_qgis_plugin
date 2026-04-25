@@ -4,6 +4,7 @@ import os
 import tempfile
 from qgis.core import QgsProject, QgsDistanceArea, QgsUnitTypes
 
+
 class NopywerExporter:
     def __init__(self, project=None):
         self.project = project or QgsProject.instance()
@@ -41,21 +42,23 @@ class NopywerExporter:
             # 2. Add/Calculate mandatory nopywer properties
             if is_cable:
                 # Calculate ellipsoidal length in meters
-                props['length'] = round(self.da.measureLength(geom), 2)
+                props["length"] = round(self.da.measureLength(geom), 2)
             else:
                 # Ensure power is a float if it exists
-                if 'power' in props and props['power'] is not None:
+                if "power" in props and props["power"] is not None:
                     try:
-                        props['power'] = float(props['power'])
+                        props["power"] = float(props["power"])
                     except ValueError:
                         pass
 
             # 3. Create Feature dict
-            features.append({
-                "type": "Feature",
-                "geometry": json.loads(geom.asJson()),
-                "properties": props
-            })
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": json.loads(geom.asJson()),
+                    "properties": props,
+                }
+            )
         return features
 
     def export_to_temp_geojson(self, load_layers, cable_layers):
@@ -81,29 +84,26 @@ class NopywerExporter:
             return None
 
         # Create the FeatureCollection
-        geojson_data = {
-            "type": "FeatureCollection",
-            "features": all_features
-        }
+        geojson_data = {"type": "FeatureCollection", "features": all_features}
 
         # Save to temp file
         fd, path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_export_")
-        with os.fdopen(fd, 'w') as f:
+        with os.fdopen(fd, "w") as f:
             json.dump(geojson_data, f, indent=2)
-        
+
         return path
 
     def run_preview(self, load_layers, cable_layers):
         """Old preview method updated to show temp file path."""
         path = self.export_to_temp_geojson(load_layers, cable_layers)
         if path:
-            print("\n" + "="*40)
+            print("\n" + "=" * 40)
             print(" NOPYWER EXPORT SUCCESSFUL")
             print(f" File saved to: {path}")
-            print("="*40)
-            # For debugging, print the first few lines of the file
-            with open(path, 'r') as f:
-                print(f.read(500) + "...")
+            print("=" * 40)
+            # # For debugging, print the first few lines of the file
+            # with open(path, 'r') as f:
+            #     print(f.read(500) + "...")
         else:
             print("\n [!] Export failed: No valid features or layers selected.")
         return path

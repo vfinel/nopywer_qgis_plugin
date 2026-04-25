@@ -26,7 +26,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsApplication
 from qgis.PyQt.QtCore import Qt
 
 # Initialize Qt resources from file resources.py
@@ -35,6 +35,8 @@ from .resources import *
 # Import the code for the dialog
 from .nopywer_plugin_dialog import NopywerPluginDialog
 from .exporter import NopywerExporter
+from .setup_dependencies import get_venv_python
+from .tasks import NopywerAnalysisTask
 import os.path
 
 
@@ -235,5 +237,22 @@ class NopywerPlugin:
         load_layers = self.get_selected_layers(self.dlg.listLoads)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
 
-        # Delegate everything to the exporter logic
-        self.exporter.run_preview(load_layers, cable_layers)
+        # 1. Export to GeoJSON
+        geojson_path = self.exporter.export_to_temp_geojson(load_layers, cable_layers)
+        
+        if not geojson_path:
+            self.iface.messageBar().pushMessage(
+                "Nopywer", "No valid layers selected for export.", Qgis.Warning
+            )
+            return
+
+        # 2. Setup Task
+        python_exe = get_venv_python()
+        task = NopywerAnalysisTask("Nopywer Grid Analysis", python_exe, geojson_path)
+        
+        # 3. Start Task
+        QgsApplication.taskManager().addTask(task)
+        
+        self.iface.messageBar().pushMessage(
+            "Nopywer", "Analysis started in background...", Qgis.Info
+        )
