@@ -34,6 +34,7 @@ from .resources import *
 
 # Import the code for the dialog
 from .nopywer_plugin_dialog import NopywerPluginDialog
+from .exporter import NopywerExporter
 import os.path
 
 
@@ -52,6 +53,10 @@ class NopywerPlugin:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
+        
+        # Initialize Exporter logic
+        self.exporter = NopywerExporter()
+
         # initialize locale
         locale = QSettings().value("locale/userLocale")[0:2]
         locale_path = os.path.join(
@@ -230,58 +235,5 @@ class NopywerPlugin:
         load_layers = self.get_selected_layers(self.dlg.listLoads)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
 
-        print("=" * 40)
-        print(f"ANALYSIS TRIGGERED")
-        print("=" * 40)
-
-        # Validation requirements
-        load_req = ["name", "power"]
-        cable_req = ["area", "plugs&sockets"]
-
-        print(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
-        for layer in load_layers:
-            missing = self.validate_layer_fields(layer, load_req)
-            if missing:
-                print(f" [!] ERROR: Layer '{layer.name()}' is missing fields: {missing}")
-            else:
-                print(f" [OK] Layer '{layer.name()}' has all required fields.")
-                self.print_layer_data(layer)
-
-        print(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
-        for layer in cable_layers:
-            missing = self.validate_layer_fields(layer, cable_req)
-            if missing:
-                print(f" [!] ERROR: Layer '{layer.name()}' is missing fields: {missing}")
-            else:
-                print(f" [OK] Layer '{layer.name()}' has all required fields.")
-                self.print_layer_data(layer)
-
-        print("\n" + "=" * 40)
-        print("ANALYSIS PREVIEW FINISHED")
-        print("=" * 40)
-
-    def validate_layer_fields(self, layer, required_fields):
-        """Checks if a layer contains all required fields. Returns list of missing fields."""
-        current_fields = [f.name() for f in layer.fields()]
-        return [f for f in required_fields if f not in current_fields]
-
-    def print_layer_data(self, layer):
-        """Prints all fields and feature attributes for a given layer."""
-        fields = layer.fields()
-        field_names = [field.name() for field in fields]
-
-        print(f"\nLayer Name: {layer.name()}")
-        print(f"Field Names: {field_names}")
-        print(f"Feature Count: {layer.featureCount()}")
-
-        # We loop through features. Note: for very large layers,
-        # this might flood the console.
-        for i, feature in enumerate(layer.getFeatures()):
-            # attributes() returns a list of values in order of fields
-            print(f"  [Feature {i}] {feature.attributes()}")
-
-            # Optional: stop after 20 features to prevent freezing the UI
-            # if the user selects a massive dataset by accident
-            if i >= 19:
-                print(f"  ... (Only showing first 20 features for {layer.name()})")
-                break
+        # Delegate everything to the exporter logic
+        self.exporter.run_preview(load_layers, cable_layers)
