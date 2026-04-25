@@ -187,7 +187,7 @@ class NopywerPlugin:
         if self.first_start == True:
             self.first_start = False
             self.dlg = NopywerPluginDialog()
-            # Link buttons to functions once
+            # Link buttons to functions
             self.dlg.btnAnalysis.clicked.connect(self.npw_analysis)
 
         # --- Populate the lists of layers ---
@@ -205,7 +205,7 @@ class NopywerPlugin:
 
     def populate_layer_list(self, list_widget):
         """Helper to populate a QListWidget with vector layers."""
-        list_widget.clear()
+        # list_widget.clear()  # do not clear selection each time the plugin is reopened
         layers = QgsProject.instance().mapLayers().values()
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):
@@ -232,14 +232,18 @@ class NopywerPlugin:
 
         print("-" * 30)
         print(f"ANALYSIS TRIGGERED")
-        
+
         print(f"Selected LOAD layers ({len(load_layers)}):")
         for layer in load_layers:
             fields = [field.name() for field in layer.fields()]
-            print(f" - {layer.name()} | Fields: {', '.join(fields[:5])}{'...' if len(fields) > 5 else ''}")
+            print(
+                f" - {layer.name()} | Fields: {', '.join(fields[:5])}{'...' if len(fields) > 5 else ''}"
+            )
 
         print(f"Selected CABLE layers ({len(cable_layers)}):")
         for layer in cable_layers:
             fields = [field.name() for field in layer.fields()]
-            print(f" - {layer.name()} | Fields: {', '.join(fields[:5])}{'...' if len(fields) > 5 else ''}")
+            print(
+                f" - {layer.name()} | Fields: {', '.join(fields[:5])}{'...' if len(fields) > 5 else ''}"
+            )
         print("-" * 30)
