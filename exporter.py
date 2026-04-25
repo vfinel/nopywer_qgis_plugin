@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+import tempfile
 from qgis.core import QgsProject, QgsDistanceArea, QgsUnitTypes
 
 class NopywerExporter:
@@ -16,66 +17,93 @@ class NopywerExporter:
         missing = [f for f in required_fields if f not in current_fields]
         return len(missing) == 0, missing
 
-    def get_feature_data(self, layer, is_cable=False):
+    def get_features_as_dict(self, layer, is_cable=False):
         """
-        Extracts features and calculates geometry properties.
+        Extracts features and formats them to match nopywer GeoJSON.
         """
-        data = []
+        features = []
         for feature in layer.getFeatures():
             geom = feature.geometry()
-            if not geom:
+            if not geom or geom.isEmpty():
                 continue
 
-            # Basic attributes
-            props = feature.attributeMap()
-            
-            # Calculations
+            # 1. Start with QGIS attributes
+            # We convert attributeMap to a standard dict, ensuring types are JSON-serializable
+            props = {}
+            for field in layer.fields():
+                val = feature.attribute(field.name())
+                # Handle NULL values or QPyNullVariant
+                if val is None or str(val) == "NULL":
+                    props[field.name()] = None
+                else:
+                    props[field.name()] = val
+
+            # 2. Add/Calculate mandatory nopywer properties
             if is_cable:
-                # Calculate length in meters
-                length_m = self.da.measureLength(geom)
-                props['_calculated_length_m'] = length_m
+                # Calculate ellipsoidal length in meters
+                props['length'] = round(self.da.measureLength(geom), 2)
             else:
-                # Calculate position (centroid for points/polygons)
-                point = geom.centroid().asPoint()
-                props['_calculated_x'] = point.x()
-                props['_calculated_y'] = point.y()
+                # Ensure power is a float if it exists
+                if 'power' in props and props['power'] is not None:
+                    try:
+                        props['power'] = float(props['power'])
+                    except ValueError:
+                        pass
 
-            data.append({
-                "id": feature.id(),
-                "properties": props,
-                "geometry": json.loads(geom.asJson()) 
+            # 3. Create Feature dict
+            features.append({
+                "type": "Feature",
+                "geometry": json.loads(geom.asJson()),
+                "properties": props
             })
-        return data
+        return features
 
-    def run_preview(self, load_layers, cable_layers):
-        """Prints the validation and data preview to console."""
-        print("\n" + "="*40)
-        print(" NOPYWER EXPORTER PREVIEW")
-        print("="*40)
-
-        results = {
-            "loads": [],
-            "cables": []
-        }
+    def export_to_temp_geojson(self, load_layers, cable_layers):
+        """
+        Combines all layers into a single GeoJSON file.
+        Returns the path to the temporary file.
+        """
+        all_features = []
 
         # Process Loads
         for layer in load_layers:
-            valid, missing = self.validate_layer(layer, ["name", "power"])
+            valid, _ = self.validate_layer(layer, ["name", "power"])
             if valid:
-                features = self.get_feature_data(layer, is_cable=False)
-                print(f"[OK] Load Layer: {layer.name()} ({len(features)} features)")
-                results["loads"].extend(features)
-            else:
-                print(f"[!] ERR: Load Layer '{layer.name()}' missing: {missing}")
+                all_features.extend(self.get_features_as_dict(layer, is_cable=False))
 
         # Process Cables
         for layer in cable_layers:
-            valid, missing = self.validate_layer(layer, ["area", "plugs&sockets"])
+            valid, _ = self.validate_layer(layer, ["area", "plugs&sockets"])
             if valid:
-                features = self.get_feature_data(layer, is_cable=True)
-                print(f"[OK] Cable Layer: {layer.name()} ({len(features)} features)")
-                results["cables"].extend(features)
-            else:
-                print(f"[!] ERR: Cable Layer '{layer.name()}' missing: {missing}")
+                all_features.extend(self.get_features_as_dict(layer, is_cable=True))
 
-        return results
+        if not all_features:
+            return None
+
+        # Create the FeatureCollection
+        geojson_data = {
+            "type": "FeatureCollection",
+            "features": all_features
+        }
+
+        # Save to temp file
+        fd, path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_export_")
+        with os.fdopen(fd, 'w') as f:
+            json.dump(geojson_data, f, indent=2)
+        
+        return path
+
+    def run_preview(self, load_layers, cable_layers):
+        """Old preview method updated to show temp file path."""
+        path = self.export_to_temp_geojson(load_layers, cable_layers)
+        if path:
+            print("\n" + "="*40)
+            print(" NOPYWER EXPORT SUCCESSFUL")
+            print(f" File saved to: {path}")
+            print("="*40)
+            # For debugging, print the first few lines of the file
+            with open(path, 'r') as f:
+                print(f.read(500) + "...")
+        else:
+            print("\n [!] Export failed: No valid features or layers selected.")
+        return path
