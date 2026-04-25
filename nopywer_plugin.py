@@ -230,20 +230,39 @@ class NopywerPlugin:
         load_layers = self.get_selected_layers(self.dlg.listLoads)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
 
-        print("-" * 30)
+        print("=" * 40)
         print(f"ANALYSIS TRIGGERED")
+        print("=" * 40)
 
-        print(f"Selected LOAD layers ({len(load_layers)}):")
+        print(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
         for layer in load_layers:
-            fields = [field.name() for field in layer.fields()]
-            print(
-                f" - {layer.name()} | Fields: {', '.join(fields[:5])}{'...' if len(fields) > 5 else ''}"
-            )
+            self.print_layer_data(layer)
 
-        print(f"Selected CABLE layers ({len(cable_layers)}):")
+        print(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
         for layer in cable_layers:
-            fields = [field.name() for field in layer.fields()]
-            print(
-                f" - {layer.name()} | Fields: {', '.join(fields[:5])}{'...' if len(fields) > 5 else ''}"
-            )
-        print("-" * 30)
+            self.print_layer_data(layer)
+
+        print("\n" + "=" * 40)
+        print("ANALYSIS PREVIEW FINISHED")
+        print("=" * 40)
+
+    def print_layer_data(self, layer):
+        """Prints all fields and feature attributes for a given layer."""
+        fields = layer.fields()
+        field_names = [field.name() for field in fields]
+
+        print(f"\nLayer Name: {layer.name()}")
+        print(f"Field Names: {field_names}")
+        print(f"Feature Count: {layer.featureCount()}")
+
+        # We loop through features. Note: for very large layers,
+        # this might flood the console.
+        for i, feature in enumerate(layer.getFeatures()):
+            # attributes() returns a list of values in order of fields
+            print(f"  [Feature {i}] {feature.attributes()}")
+
+            # Optional: stop after 20 features to prevent freezing the UI
+            # if the user selects a massive dataset by accident
+            if i >= 19:
+                print(f"  ... (Only showing first 20 features for {layer.name()})")
+                break
