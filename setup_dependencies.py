@@ -30,35 +30,25 @@ def get_python_executable():
 
 
 def setup_dependencies():
-    """Bootstraps uv and installs nopywer directly from GitHub."""
     python_exe = get_python_executable()
 
-    # 1. Ensure 'uv' is installed in the QGIS Python environment
-    try:
-        importlib.import_module("uv")
-    except ImportError:
-        print("Installing the 'uv' package manager in QGIS...")
-        try:
-            subprocess.check_call([python_exe, "-m", "pip", "install", "uv"])
-        except subprocess.CalledProcessError:
-            print("Critical Error: Failed to install uv via pip.")
-            return False
-
-    # 2. Check if 'nopywer' is already installed
     try:
         importlib.import_module("nopywer")
         return True
     except ImportError:
-        print("nopywer not found. Installing from GitHub using uv...")
-        github_url = "git+https://github.com/vfinel/nopywer.git"
+        print("nopywer not found. Installing from GitHub using pip...")
+
+        # Download the ZIP directly using native pip
+        github_zip_url = "https://github.com/vfinel/nopywer/archive/refs/heads/main.zip"
 
         try:
-            # Execute: uv pip install git+https://...
+            # We use standard pip here because it handles zip URLs much better than uv
             subprocess.check_call(
-                [python_exe, "-m", "uv", "pip", "install", github_url]
+                [python_exe, "-m", "pip", "install", "--user", github_zip_url]
             )
             print("Successfully installed nopywer!")
+            importlib.invalidate_caches()
             return True
-        except subprocess.CalledProcessError:
-            print("Failed to install nopywer from GitHub.")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to install nopywer from GitHub. {e}")
             return False
