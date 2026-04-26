@@ -28,7 +28,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsApplication
+from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsApplication, QgsMessageLog
 from qgis.PyQt.QtCore import Qt
 
 # Initialize Qt resources from file resources.py
@@ -60,6 +60,9 @@ class NopywerPlugin:
 
         # Initialize Exporter logic
         self.exporter = NopywerExporter()
+        
+        # Keep track of running tasks to prevent garbage collection
+        self.running_tasks = []
 
         # initialize locale
         locale = QSettings().value("locale/userLocale")[0:2]
@@ -246,10 +249,16 @@ class NopywerPlugin:
         self.npw_analysis(load_layers, cable_layers)
 
     def npw_analysis(self, load_layers, cable_layers):
+        print(
+            f"DEBUG: npw_analysis called with {len(load_layers)} loads and {len(cable_layers)} cables"
+        )
+        QgsMessageLog.logMessage("npw_analysis triggered", "Nopywer", Qgis.Info)
+
         # 1. Preview and Export to GeoJSON
         geojson_path = self.exporter.run_preview(load_layers, cable_layers)
 
         if not geojson_path:
+            print("DEBUG: Export failed, no GeoJSON path returned.")
             self.iface.messageBar().pushMessage(
                 "Nopywer", "No valid layers selected for export.", Qgis.Warning
             )
@@ -259,7 +268,14 @@ class NopywerPlugin:
         python_exe = get_venv_python()
         task = NopywerAnalysisTask("Nopywer Grid Analysis", python_exe, geojson_path)
 
+        task = NopywerAnalysisTask("Nopywer Grid Analysis", python_exe, geojson_path)
+        
         # 3. Start Task
+        # Hold reference to prevent garbage collection
+        self.running_tasks.append(task)
+        # Optional: Clean up list when task is done
+        task.taskCompleted.connect(lambda: self.running_tasks.remove(task) if task in self.running_tasks else None)
+        
         QgsApplication.taskManager().addTask(task)
 
         self.iface.messageBar().pushMessage(
