@@ -53,23 +53,23 @@ def find_uv():
             
     return "uv" # Fallback to name and hope for the best
 
-def setup_dependencies(force=False):
+def setup_dependencies(force=False, clean=False):
     """
     Uses uv to create a virtual environment and install nopywer.
-    :param force: If True, deletes the existing venv and reinstalls.
+    :param force: If True, runs the install command even if nopywer is present (updates).
+    :param clean: If True, deletes the existing venv first.
     """
     plugin_dir = os.path.abspath(os.path.dirname(__file__))
     venv_path = get_venv_path()
     uv_path = find_uv()
     
-    # We must isolate the environment. QGIS sets PYTHONPATH/PYTHONHOME
-    # which can cause conflicts ("SRE module mismatch") when building packages with uv.
+    # Isolate environment
     env = os.environ.copy()
     env.pop('PYTHONPATH', None)
     env.pop('PYTHONHOME', None)
     
-    if force and os.path.exists(venv_path):
-        print(f"Forcing refresh: Removing existing venv at {venv_path}...")
+    if clean and os.path.exists(venv_path):
+        print(f"Cleaning: Removing existing venv at {venv_path}...")
         try:
             shutil.rmtree(venv_path)
         except Exception as e:
@@ -87,29 +87,33 @@ def setup_dependencies(force=False):
 
     python_exe = get_venv_python()
 
-    # 2. Check if nopywer is already installed and working
-    try:
-        subprocess.check_call(
-            [python_exe, "-c", "import nopywer"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=env
-        )
-        return True
-    except:
-        print("nopywer missing or venv broken. Installing...")
+    # 2. Check if nopywer is already installed (skip if not forcing)
+    if not force:
+        try:
+            subprocess.check_call(
+                [python_exe, "-c", "import nopywer"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env
+            )
+            return True
+        except:
+            print("nopywer missing or venv broken. Installing...")
 
-    # 3. Install nopywer from GitHub ZIP (NO GIT REQUIRED)
+    # 3. Install/Update nopywer from GitHub ZIP
     branch = "qgis_plugin"
     zip_url = f"https://github.com/vfinel/nopywer/archive/refs/heads/{branch}.zip"
 
-    print(f"Installing nopywer from {zip_url}...")
+    if force:
+        print(f"Refreshing nopywer from {zip_url}...")
+    else:
+        print(f"Installing nopywer from {zip_url}...")
 
     try:
         # Use uv pip install on the ZIP URL
         cmd = [uv_path, "pip", "install", "--python", python_exe, zip_url]
         
-        # If forcing, we want to ignore cache to get latest ZIP
+        # If forcing, we want to ensure we get the latest ZIP content
         if force:
             cmd.append("--refresh")
 

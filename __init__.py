@@ -23,14 +23,6 @@
  This script initializes the plugin, making it known to QGIS.
 """
 
-from .setup_dependencies import setup_dependencies
-
-
-# Run the setup before initializing the plugin
-if not setup_dependencies():
-    print("Warning: Plugin dependencies could not be resolved.")
-
-
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
     """Load NopywerPlugin class from file NopywerPlugin.
@@ -38,7 +30,13 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    #
-    from .nopywer_plugin import NopywerPlugin
+    from .setup_dependencies import setup_dependencies, get_venv_python
+    import os
 
+    # Fast check: only run setup if venv is missing
+    if not os.path.exists(get_venv_python()):
+        if not setup_dependencies():
+            print("Warning: Plugin dependencies could not be resolved.")
+            
+    from .nopywer_plugin import NopywerPlugin
     return NopywerPlugin(iface)
