@@ -108,6 +108,13 @@ class NopywerExporter:
             json.dump(geojson_data, f, indent=2)
 
         print(f"geoJSON file written: {path}")
+
+        # Also write to home directory for easy access
+        home_export = os.path.join(os.path.expanduser("~"), "nopywer_export.geojson")
+        with open(home_export, "w") as f:
+            json.dump(geojson_data, f, indent=2)
+        print(f"Copy also saved to: {home_export}")
+
         return path
 
     def run_preview(self, load_layers, cable_layers):
