@@ -68,10 +68,25 @@ class NopywerExporter:
                     print(f" [FOUND] Generator detected: '{props['name']}'")
 
             # 3. Create Feature dict
+            geom_json = json.loads(geom.asJson())
+
+            # Convert MultiPoint to Point if it contains exactly one point
+            if not is_cable and geom_json.get("type") == "MultiPoint":
+                coords = geom_json.get("coordinates", [])
+                if len(coords) == 1:
+                    geom_json["type"] = "Point"
+                    geom_json["coordinates"] = coords[0]
+                else:
+                    raise ValueError(
+                        f"Layer '{layer.name()}', Feature {feature.id()}: "
+                        f"MultiPoint contains {len(coords)} points. "
+                        "Only single-point features are supported."
+                    )
+
             features.append(
                 {
                     "type": "Feature",
-                    "geometry": json.loads(geom.asJson()),
+                    "geometry": geom_json,
                     "properties": props,
                 }
             )
