@@ -195,7 +195,7 @@ class NopywerPlugin:
             self.first_start = False
             self.dlg = NopywerPluginDialog()
             # Link buttons to functions
-            self.dlg.btnAnalysis.clicked.connect(self.npw_analysis)
+            self.dlg.btnAnalysis.clicked.connect(self.npw_analysis_button)
             self.dlg.btnOptimize.clicked.connect(self.npw_optimize)
             self.dlg.btnExport.clicked.connect(self.npw_export)
             self.dlg.btnTest.clicked.connect(self.npw_test)
@@ -234,12 +234,15 @@ class NopywerPlugin:
                 selected_layers.append(layer)
         return selected_layers
 
-    def npw_analysis(self):
+    def npw_analysis_button(self):
         """This function triggers when the Analysis button is clicked."""
-
         load_layers = self.get_selected_layers(self.dlg.listNodes)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
+        print(f"{load_layers=}")
+        print(f"{cable_layers=}")
+        self.npw_analysis(load_layers, cable_layers)
 
+    def npw_analysis(self, load_layers, cable_layers):
         # 1. Preview and Export to GeoJSON
         geojson_path = self.exporter.run_preview(load_layers, cable_layers)
 
@@ -268,4 +271,20 @@ class NopywerPlugin:
 
     def npw_test(self):
         print("running test")
-        # TODO: get preselected layers and call npw_analysis
+        layer_names_load = ["test_nodes"]
+        layer_names_cable = [
+            "test_1phase",
+            "test_3phases_32a",
+            "test_3phases_63a",
+        ]
+
+        # Get actual layer objects from project by name
+        all_layers = QgsProject.instance().mapLayers().values()
+        load_layers = [
+            layer for layer in all_layers if layer.name() in layer_names_load
+        ]
+        cable_layers = [
+            layer for layer in all_layers if layer.name() in layer_names_cable
+        ]
+
+        self.npw_analysis(load_layers, cable_layers)
