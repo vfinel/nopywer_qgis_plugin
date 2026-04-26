@@ -2,7 +2,13 @@
 import json
 import os
 import tempfile
-from qgis.core import QgsProject, QgsDistanceArea, QgsUnitTypes
+from qgis.core import (
+    QgsProject, 
+    QgsDistanceArea, 
+    QgsUnitTypes, 
+    QgsCoordinateReferenceSystem, 
+    QgsCoordinateTransform
+)
 
 
 class NopywerExporter:
@@ -11,6 +17,10 @@ class NopywerExporter:
         self.da = QgsDistanceArea()
         self.da.setSourceCrs(self.project.crs(), self.project.transformContext())
         self.da.setEllipsoid(self.project.ellipsoid())
+        
+        # Target CRS for nopywer (WGS 84 degrees)
+        self.target_crs_id = "EPSG:4326"
+        self.target_crs = QgsCoordinateReferenceSystem(self.target_crs_id)
 
     def validate_layer(self, layer, required_fields):
         """Returns (is_valid, missing_fields)"""
@@ -22,11 +32,19 @@ class NopywerExporter:
         """
         Extracts features and formats them to match nopywer GeoJSON.
         """
+        # Setup transformation for this layer
+        transform = QgsCoordinateTransform(
+            layer.crs(), self.target_crs, self.project.transformContext()
+        )
+
         features = []
         for feature in layer.getFeatures():
             geom = feature.geometry()
             if not geom or geom.isEmpty():
                 continue
+
+            # Transform geometry to WGS 84 (Degrees)
+            geom.transform(transform)
 
             # 1. Start with QGIS attributes
             # We convert attributeMap to a standard dict, ensuring types are JSON-serializable
@@ -115,7 +133,14 @@ class NopywerExporter:
             return None
 
         # Create the FeatureCollection
-        geojson_data = {"type": "FeatureCollection", "features": all_features}
+        geojson_data = {
+            "type": "FeatureCollection",
+            "crs": {
+                "type": "name",
+                "properties": {"name": self.target_crs.authid()},
+            },
+            "features": all_features,
+        }
 
         # Save to temp file
         fd, input_path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_export_")
