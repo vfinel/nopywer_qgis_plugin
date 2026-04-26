@@ -254,15 +254,26 @@ class NopywerPlugin:
         )
         QgsMessageLog.logMessage("npw_analysis triggered", "Nopywer", Qgis.Info)
 
-        # 1. Preview and Export to GeoJSON
-        geojson_in, geojson_out = self.exporter.run_preview(load_layers, cable_layers)
+        # 0. Get power unit multiplier
+        unit = self.dlg.cmbPowerUnits.currentText()
+        scale = 1000.0  # Default kW
+        if unit == "W":
+            scale = 1.0
+        elif unit == "MW":
+            scale = 1000000.0
+        print(f"DEBUG: Using power scale factor: {scale} (selected unit: {unit})")
 
-        if not geojson_in:
+        # 1. Preview and Export to GeoJSON
+        paths = self.exporter.run_preview(load_layers, cable_layers, power_units_scale=scale)
+
+        if not paths:
             print("DEBUG: Export failed, no GeoJSON path returned.")
             self.iface.messageBar().pushMessage(
                 "Nopywer", "No valid layers selected for export.", Qgis.Warning
             )
             return
+
+        geojson_in, geojson_out = paths
 
         # 2. Setup Task
         python_exe = get_venv_python()

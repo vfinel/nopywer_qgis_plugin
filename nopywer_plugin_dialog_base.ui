@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>300</y>
+     <y>370</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -72,7 +72,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>260</y>
+     <y>330</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -133,6 +133,44 @@
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QComboBox" name="cmbPowerUnits">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>260</y>
+     <width>101</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>kW</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>W</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>MW</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>240</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Power units</string>
+   </property>
   </widget>
  </widget>
  <resources/>

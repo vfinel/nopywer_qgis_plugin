@@ -28,7 +28,7 @@ class NopywerExporter:
         missing = [f for f in required_fields if f not in current_fields]
         return len(missing) == 0, missing
 
-    def get_features_as_dict(self, layer, is_cable=False):
+    def get_features_as_dict(self, layer, is_cable=False, power_units_scale=1.0):
         """
         Extracts features and formats them to match nopywer GeoJSON.
         """
@@ -70,7 +70,8 @@ class NopywerExporter:
                 # Ensure 'power' is a float
                 # TODO: throw warning or error if "power" or "name" doenst exist. Make a list of non-ok features.
                 try:
-                    props["power"] = float(props.get("power") or 0)
+                    orig_power = float(props.get("power") or 0)
+                    props["power"] = orig_power * power_units_scale
                 except:
                     props["power"] = 0.0
 
@@ -110,7 +111,7 @@ class NopywerExporter:
             )
         return features
 
-    def export_to_temp_geojson(self, load_layers, cable_layers):
+    def export_to_temp_geojson(self, load_layers, cable_layers, power_units_scale=1.0):
         """
         Combines all layers into a single GeoJSON file.
         Returns the path to the temporary file.
@@ -121,7 +122,7 @@ class NopywerExporter:
         for layer in load_layers:
             valid, _ = self.validate_layer(layer, ["name", "power"])
             if valid:
-                all_features.extend(self.get_features_as_dict(layer, is_cable=False))
+                all_features.extend(self.get_features_as_dict(layer, is_cable=False, power_units_scale=power_units_scale))
 
         # Process Cables
         for layer in cable_layers:
@@ -139,6 +140,7 @@ class NopywerExporter:
                 "type": "name",
                 "properties": {"name": self.target_crs.authid()},
             },
+            "power_unit": "W",
             "features": all_features,
         }
 
@@ -159,7 +161,7 @@ class NopywerExporter:
         _, output_path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_output_")
         return input_path, output_path
 
-    def run_preview(self, load_layers, cable_layers):
+    def run_preview(self, load_layers, cable_layers, power_units_scale=1.0):
         """Prints the validation and data preview to console."""
         print("\n" + "=" * 40)
         print(" NOPYWER EXPORTER PREVIEW")
@@ -185,12 +187,14 @@ class NopywerExporter:
             else:
                 print(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
 
-        path = self.export_to_temp_geojson(load_layers, cable_layers)
-        if path:
+        path_tuple = self.export_to_temp_geojson(load_layers, cable_layers, power_units_scale=power_units_scale)
+        if path_tuple:
+            input_path, output_path = path_tuple
             print("\n" + "-" * 40)
-            print(f" Export saved to: {path}")
+            print(f" Export saved to: {input_path}")
             print("-" * 40)
-        return path
+            return input_path, output_path
+        return None
 
     def print_layer_data(self, layer):
         """Prints all fields and feature attributes for a given layer."""
