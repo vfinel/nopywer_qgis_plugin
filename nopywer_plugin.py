@@ -237,8 +237,8 @@ class NopywerPlugin:
         load_layers = self.get_selected_layers(self.dlg.listLoads)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
 
-        # 1. Export to GeoJSON
-        geojson_path = self.exporter.export_to_temp_geojson(load_layers, cable_layers)
+        # 1. Preview and Export to GeoJSON
+        geojson_path = self.exporter.run_preview(load_layers, cable_layers)
         
         if not geojson_path:
             self.iface.messageBar().pushMessage(

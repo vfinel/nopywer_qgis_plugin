@@ -32,24 +32,40 @@ class NopywerExporter:
             # We convert attributeMap to a standard dict, ensuring types are JSON-serializable
             props = {}
             for field in layer.fields():
+                fname = field.name().lower()
                 val = feature.attribute(field.name())
                 # Handle NULL values or QPyNullVariant
                 if val is None or str(val) == "NULL":
-                    props[field.name()] = None
+                    props[fname] = None
                 else:
-                    props[field.name()] = val
+                    props[fname] = val
 
             # 2. Add/Calculate mandatory nopywer properties
             if is_cable:
-                # Calculate ellipsoidal length in meters
-                props["length"] = round(self.da.measureLength(geom), 2)
+                # Normalize cable properties
+                props["length"] = float(props.get("length") or 0)
+                if props["length"] <= 0:
+                    props["length"] = round(self.da.measureLength(geom), 2)
+
+                # nopywer looks for 'area' and 'plugs&sockets' (already in props if fields matched)
             else:
-                # Ensure power is a float if it exists
-                if "power" in props and props["power"] is not None:
-                    try:
-                        props["power"] = float(props["power"])
-                    except ValueError:
-                        pass
+                # Ensure 'power' is a float
+                # TODO: throw warning or error if "power" or "name" doenst exist. Make a list of non-ok features.
+                try:
+                    props["power"] = float(props.get("power") or 0)
+                except:
+                    props["power"] = 0.0
+
+                # Ensure 'name' exists
+                if not props.get("name"):
+                    props["name"] = f"node_{feature.id()}"
+
+                # Check for generator
+                if "generator" in str(props["name"]).lower():
+                    # Force lowercase "generator" in the name for nopywer's detection
+                    if "generator" not in str(props["name"]):
+                        props["name"] = str(props["name"]) + " generator"
+                    print(f" [FOUND] Generator detected: '{props['name']}'")
 
             # 3. Create Feature dict
             features.append(
@@ -91,19 +107,52 @@ class NopywerExporter:
         with os.fdopen(fd, "w") as f:
             json.dump(geojson_data, f, indent=2)
 
+        print(f"geoJSON file written: {path}")
         return path
 
     def run_preview(self, load_layers, cable_layers):
-        """Old preview method updated to show temp file path."""
+        """Prints the validation and data preview to console."""
+        print("\n" + "=" * 40)
+        print(" NOPYWER EXPORTER PREVIEW")
+        print("=" * 40)
+
+        # Process Loads
+        print(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
+        for layer in load_layers:
+            valid, missing = self.validate_layer(layer, ["name", "power"])
+            if valid:
+                print(f" [OK] Layer: {layer.name()}")
+                self.print_layer_data(layer)
+            else:
+                print(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
+
+        # Process Cables
+        print(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
+        for layer in cable_layers:
+            valid, missing = self.validate_layer(layer, ["area", "plugs&sockets"])
+            if valid:
+                print(f" [OK] Layer: {layer.name()}")
+                self.print_layer_data(layer)
+            else:
+                print(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
+
         path = self.export_to_temp_geojson(load_layers, cable_layers)
         if path:
-            print("\n" + "=" * 40)
-            print(" NOPYWER EXPORT SUCCESSFUL")
-            print(f" File saved to: {path}")
-            print("=" * 40)
-            # # For debugging, print the first few lines of the file
-            # with open(path, 'r') as f:
-            #     print(f.read(500) + "...")
-        else:
-            print("\n [!] Export failed: No valid features or layers selected.")
+            print("\n" + "-" * 40)
+            print(f" Export saved to: {path}")
+            print("-" * 40)
         return path
+
+    def print_layer_data(self, layer):
+        """Prints all fields and feature attributes for a given layer."""
+        fields = layer.fields()
+        field_names = [field.name() for field in fields]
+
+        print(f"  Field Names: {field_names}")
+        print(f"  Feature Count: {layer.featureCount()}")
+
+        for i, feature in enumerate(layer.getFeatures()):
+            print(f"    [Feature {i}] {feature.attributes()}")
+            if i >= 19:
+                print(f"    ... (Only showing first 20 features for {layer.name()})")
+                break
