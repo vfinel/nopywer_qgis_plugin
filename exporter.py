@@ -118,11 +118,11 @@ class NopywerExporter:
         geojson_data = {"type": "FeatureCollection", "features": all_features}
 
         # Save to temp file
-        fd, path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_export_")
+        fd, input_path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_export_")
         with os.fdopen(fd, "w") as f:
             json.dump(geojson_data, f, indent=2)
 
-        print(f"geoJSON file written: {path}")
+        print(f"geoJSON file written: {input_path}")
 
         # Also write to home directory for easy access
         home_export = os.path.join(os.path.expanduser("~"), "nopywer_export.geojson")
@@ -130,7 +130,9 @@ class NopywerExporter:
             json.dump(geojson_data, f, indent=2)
         print(f"Copy also saved to: {home_export}")
 
-        return path
+        # define an output file for nopywer outputs
+        _, output_path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_output_")
+        return input_path, output_path
 
     def run_preview(self, load_layers, cable_layers):
         """Prints the validation and data preview to console."""

@@ -60,7 +60,7 @@ class NopywerPlugin:
 
         # Initialize Exporter logic
         self.exporter = NopywerExporter()
-        
+
         # Keep track of running tasks to prevent garbage collection
         self.running_tasks = []
 
@@ -255,9 +255,9 @@ class NopywerPlugin:
         QgsMessageLog.logMessage("npw_analysis triggered", "Nopywer", Qgis.Info)
 
         # 1. Preview and Export to GeoJSON
-        geojson_path = self.exporter.run_preview(load_layers, cable_layers)
+        geojson_in, geojson_out = self.exporter.run_preview(load_layers, cable_layers)
 
-        if not geojson_path:
+        if not geojson_in:
             print("DEBUG: Export failed, no GeoJSON path returned.")
             self.iface.messageBar().pushMessage(
                 "Nopywer", "No valid layers selected for export.", Qgis.Warning
@@ -266,16 +266,20 @@ class NopywerPlugin:
 
         # 2. Setup Task
         python_exe = get_venv_python()
-        task = NopywerAnalysisTask("Nopywer Grid Analysis", python_exe, geojson_path)
+        task = NopywerAnalysisTask(
+            "Nopywer Grid Analysis", python_exe, geojson_in, geojson_out
+        )
 
-        task = NopywerAnalysisTask("Nopywer Grid Analysis", python_exe, geojson_path)
-        
         # 3. Start Task
         # Hold reference to prevent garbage collection
         self.running_tasks.append(task)
         # Optional: Clean up list when task is done
-        task.taskCompleted.connect(lambda: self.running_tasks.remove(task) if task in self.running_tasks else None)
-        
+        task.taskCompleted.connect(
+            lambda: self.running_tasks.remove(task)
+            if task in self.running_tasks
+            else None
+        )
+
         QgsApplication.taskManager().addTask(task)
 
         self.iface.messageBar().pushMessage(
