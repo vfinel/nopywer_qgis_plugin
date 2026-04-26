@@ -55,7 +55,7 @@ class NopywerPlugin:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-        
+
         # Initialize Exporter logic
         self.exporter = NopywerExporter()
 
@@ -196,9 +196,12 @@ class NopywerPlugin:
             self.dlg = NopywerPluginDialog()
             # Link buttons to functions
             self.dlg.btnAnalysis.clicked.connect(self.npw_analysis)
+            self.dlg.btnOptimize.clicked.connect(self.npw_optimize)
+            self.dlg.btnExport.clicked.connect(self.npw_export)
+            self.dlg.btnTest.clicked.connect(self.npw_test)
 
         # --- Populate the lists of layers ---
-        self.populate_layer_list(self.dlg.listLoads)
+        self.populate_layer_list(self.dlg.listNodes)
         self.populate_layer_list(self.dlg.listCables)
         # -------------------------------------------------------
 
@@ -234,12 +237,12 @@ class NopywerPlugin:
     def npw_analysis(self):
         """This function triggers when the Analysis button is clicked."""
 
-        load_layers = self.get_selected_layers(self.dlg.listLoads)
+        load_layers = self.get_selected_layers(self.dlg.listNodes)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
 
         # 1. Preview and Export to GeoJSON
         geojson_path = self.exporter.run_preview(load_layers, cable_layers)
-        
+
         if not geojson_path:
             self.iface.messageBar().pushMessage(
                 "Nopywer", "No valid layers selected for export.", Qgis.Warning
@@ -249,10 +252,20 @@ class NopywerPlugin:
         # 2. Setup Task
         python_exe = get_venv_python()
         task = NopywerAnalysisTask("Nopywer Grid Analysis", python_exe, geojson_path)
-        
+
         # 3. Start Task
         QgsApplication.taskManager().addTask(task)
-        
+
         self.iface.messageBar().pushMessage(
             "Nopywer", "Analysis started in background...", Qgis.Info
         )
+
+    def npw_optimize(self):
+        print("warning: optimization is not implemented yet")
+
+    def npw_export(self):
+        print("warning: the export button has no effect yet")
+
+    def npw_test(self):
+        print("running test")
+        # TODO: get preselected layers and call npw_analysis
