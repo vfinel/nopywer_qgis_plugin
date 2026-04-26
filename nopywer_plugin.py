@@ -22,6 +22,8 @@
  ***************************************************************************/
 """
 
+import os
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
@@ -35,9 +37,9 @@ from .resources import *
 # Import the code for the dialog
 from .nopywer_plugin_dialog import NopywerPluginDialog
 from .exporter import NopywerExporter
-from .setup_dependencies import get_venv_python
+from .setup_dependencies import get_venv_python, setup_dependencies
 from .tasks import NopywerAnalysisTask
-import os.path
+from qgis.core import QgsApplication
 
 
 class NopywerPlugin:
@@ -199,6 +201,7 @@ class NopywerPlugin:
             self.dlg.btnOptimize.clicked.connect(self.npw_optimize)
             self.dlg.btnExport.clicked.connect(self.npw_export)
             self.dlg.btnTest.clicked.connect(self.npw_test)
+            self.dlg.btnRefresh.clicked.connect(self.npw_refresh_lib)
 
         # --- Populate the lists of layers ---
         self.populate_layer_list(self.dlg.listNodes)
@@ -288,3 +291,23 @@ class NopywerPlugin:
         ]
 
         self.npw_analysis(load_layers, cable_layers)
+
+    def npw_refresh_lib(self):
+        """Force re-install of nopywer library."""
+        self.iface.messageBar().pushMessage(
+            "Nopywer", "Refreshing nopywer library...", Qgis.Info
+        )
+
+        # This will block the UI briefly while uv does its magic
+        success = setup_dependencies(force=True)
+
+        if success:
+            self.iface.messageBar().pushMessage(
+                "Nopywer", "nopywer successfully refreshed!", Qgis.Success
+            )
+        else:
+            self.iface.messageBar().pushMessage(
+                "Nopywer",
+                "Failed to refresh nopywer. Check console for errors.",
+                Qgis.Critical,
+            )

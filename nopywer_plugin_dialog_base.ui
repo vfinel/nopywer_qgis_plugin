@@ -13,6 +13,22 @@
   <property name="windowTitle">
    <string>nopywer</string>
   </property>
+  <widget class="QPushButton" name="btnRefresh">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>300</y>
+     <width>93</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Force re-install nopywer from GitHub</string>
+   </property>
+   <property name="text">
+    <string>Refresh lib</string>
+   </property>
+  </widget>
   <widget class="QPushButton" name="btnAnalysis">
    <property name="geometry">
     <rect>
@@ -78,7 +94,7 @@
     <string>to geoJSON</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>20</x>
