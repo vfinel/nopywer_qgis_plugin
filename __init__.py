@@ -31,6 +31,14 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    #
+    from .setup_dependencies import setup_dependencies, get_venv_python
+    import os
+
+    # Fast check: only run setup if venv is missing
+    if not os.path.exists(get_venv_python()):
+        if not setup_dependencies():
+            print("Warning: Plugin dependencies could not be resolved.")
+
     from .nopywer_plugin import NopywerPlugin
+
     return NopywerPlugin(iface)

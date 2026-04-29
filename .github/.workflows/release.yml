@@ -1,0 +1,33 @@
+name: Release QGIS Plugin
+
+# This tells GitHub to run the action whenever you push a new tag (e.g., v0.1)
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # We need write permissions so the Action can create a Release
+    permissions:
+      contents: write 
+    
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install qgis-plugin-ci
+        run: pip install qgis-plugin-ci
+        
+      - name: Package and Release
+        # This command builds the .zip, creates the Release, and generates plugins.xml
+        run: >
+          qgis-plugin-ci release ${{ github.ref_name }}
+          --github-token ${{ secrets.GITHUB_TOKEN }}
+          --create-plugin-repo

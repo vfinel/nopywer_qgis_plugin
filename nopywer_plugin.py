@@ -21,15 +21,25 @@
  *                                                                         *
  ***************************************************************************/
 """
+
+import os
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
+from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsApplication, QgsMessageLog
+from qgis.PyQt.QtCore import Qt
+
 # Initialize Qt resources from file resources.py
 from .resources import *
+
 # Import the code for the dialog
 from .nopywer_plugin_dialog import NopywerPluginDialog
-import os.path
+from .exporter import NopywerExporter
+from .setup_dependencies import get_venv_python, setup_dependencies
+from .tasks import NopywerAnalysisTask
+from qgis.core import QgsApplication
 
 
 class NopywerPlugin:
@@ -47,12 +57,18 @@ class NopywerPlugin:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
+
+        # Initialize Exporter logic
+        self.exporter = NopywerExporter()
+
+        # Keep track of running tasks to prevent garbage collection
+        self.running_tasks = []
+
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
+        locale = QSettings().value("locale/userLocale")[0:2]
         locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'NopywerPlugin_{}.qm'.format(locale))
+            self.plugin_dir, "i18n", "NopywerPlugin_{}.qm".format(locale)
+        )
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -61,7 +77,7 @@ class NopywerPlugin:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&nopywer')
+        self.menu = self.tr("&nopywer")
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -80,8 +96,7 @@ class NopywerPlugin:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('NopywerPlugin', message)
-
+        return QCoreApplication.translate("NopywerPlugin", message)
 
     def add_action(
         self,
@@ -93,7 +108,8 @@ class NopywerPlugin:
         add_to_toolbar=True,
         status_tip=None,
         whats_this=None,
-        parent=None):
+        parent=None,
+    ):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -149,9 +165,7 @@ class NopywerPlugin:
             self.iface.addToolBarIcon(action)
 
         if add_to_menu:
-            self.iface.addPluginToMenu(
-                self.menu,
-                action)
+            self.iface.addPluginToMenu(self.menu, action)
 
         self.actions.append(action)
 
@@ -160,25 +174,22 @@ class NopywerPlugin:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/nopywer_plugin/icon.png'
+        icon_path = ":/plugins/nopywer_plugin/icon.png"
         self.add_action(
             icon_path,
-            text=self.tr(u'select layers'),
+            text=self.tr("select layers"),
             callback=self.run,
-            parent=self.iface.mainWindow())
+            parent=self.iface.mainWindow(),
+        )
 
         # will be set False in run()
         self.first_start = True
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginMenu(
-                self.tr(u'&nopywer'),
-                action)
+            self.iface.removePluginMenu(self.tr("&nopywer"), action)
             self.iface.removeToolBarIcon(action)
-
 
     def run(self):
         """Run method that performs all the real work"""
@@ -188,13 +199,148 @@ class NopywerPlugin:
         if self.first_start == True:
             self.first_start = False
             self.dlg = NopywerPluginDialog()
+            # Link buttons to functions
+            self.dlg.btnAnalysis.clicked.connect(self.npw_analysis_button)
+            self.dlg.btnOptimize.clicked.connect(self.npw_optimize)
+            self.dlg.btnExport.clicked.connect(self.npw_export)
+            self.dlg.btnTest.clicked.connect(self.npw_test)
+            self.dlg.btnRefresh.clicked.connect(self.npw_refresh_lib)
 
-        # show the dialog
+        # --- Populate the lists of layers ---
+        self.populate_layer_list(self.dlg.listNodes)
+        self.populate_layer_list(self.dlg.listCables)
+        # -------------------------------------------------------
+
+        # Show the dialog
         self.dlg.show()
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
             pass
+
+    def populate_layer_list(self, list_widget):
+        """Helper to populate a QListWidget with vector layers."""
+        # list_widget.clear()  # do not clear selection each time the plugin is reopened
+        layers = QgsProject.instance().mapLayers().values()
+        for layer in layers:
+            if isinstance(layer, QgsVectorLayer):
+                list_widget.addItem(layer.name())
+                # Store the unique layer ID invisibly
+                item = list_widget.item(list_widget.count() - 1)
+                item.setData(Qt.UserRole, layer.id())
+
+    def get_selected_layers(self, list_widget):
+        """Helper to get actual layer objects from selected list items."""
+        selected_layers = []
+        for item in list_widget.selectedItems():
+            layer_id = item.data(Qt.UserRole)
+            layer = QgsProject.instance().mapLayer(layer_id)
+            if layer:
+                selected_layers.append(layer)
+        return selected_layers
+
+    def npw_analysis_button(self):
+        """This function triggers when the Analysis button is clicked."""
+        load_layers = self.get_selected_layers(self.dlg.listNodes)
+        cable_layers = self.get_selected_layers(self.dlg.listCables)
+        print(f"{load_layers=}")
+        print(f"{cable_layers=}")
+        self.npw_analysis(load_layers, cable_layers)
+
+    def npw_analysis(self, load_layers, cable_layers):
+        print(
+            f"DEBUG: npw_analysis called with {len(load_layers)} loads and {len(cable_layers)} cables"
+        )
+        QgsMessageLog.logMessage("npw_analysis triggered", "Nopywer", Qgis.Info)
+
+        # 0. Get power unit multiplier
+        unit = self.dlg.cmbPowerUnits.currentText()
+        scale = 1000.0  # Default kW
+        if unit == "W":
+            scale = 1.0
+        elif unit == "MW":
+            scale = 1000000.0
+        print(f"DEBUG: Using power scale factor: {scale} (selected unit: {unit})")
+
+        # 1. Preview and Export to GeoJSON
+        paths = self.exporter.run_preview(
+            load_layers, cable_layers, power_units_scale=scale
+        )
+
+        if not paths:
+            print("DEBUG: Export failed, no GeoJSON path returned.")
+            self.iface.messageBar().pushMessage(
+                "Nopywer", "No valid layers selected for export.", Qgis.Warning
+            )
+            return
+
+        geojson_in, geojson_out = paths
+
+        # 2. Setup Task
+        python_exe = get_venv_python()
+        task = NopywerAnalysisTask(
+            "Nopywer Grid Analysis", python_exe, geojson_in, geojson_out
+        )
+
+        # 3. Start Task
+        # Hold reference to prevent garbage collection
+        self.running_tasks.append(task)
+        # Optional: Clean up list when task is done
+        task.taskCompleted.connect(
+            lambda: self.running_tasks.remove(task)
+            if task in self.running_tasks
+            else None
+        )
+
+        QgsApplication.taskManager().addTask(task)
+
+        self.iface.messageBar().pushMessage(
+            "Nopywer", "Analysis started in background...", Qgis.Info
+        )
+
+    def npw_optimize(self):
+        print("warning: optimization is not implemented yet")
+
+    def npw_export(self):
+        print("warning: the export button has no effect yet")
+
+    def npw_test(self):
+        print("running test")
+        layer_names_load = ["test_nodes"]
+        layer_names_cable = [
+            "test_1phase",
+            "test_3phases_32a",
+            "test_3phases_63a",
+        ]
+
+        # Get actual layer objects from project by name
+        all_layers = QgsProject.instance().mapLayers().values()
+        load_layers = [
+            layer for layer in all_layers if layer.name() in layer_names_load
+        ]
+        cable_layers = [
+            layer for layer in all_layers if layer.name() in layer_names_cable
+        ]
+
+        self.npw_analysis(load_layers, cable_layers)
+
+    def npw_refresh_lib(self):
+        """Force re-install of nopywer library."""
+        self.iface.messageBar().pushMessage(
+            "Nopywer", "Refreshing nopywer library...", Qgis.Info
+        )
+
+        # This will block the UI briefly while uv does its magic
+        success = setup_dependencies(force=True)
+
+        if success:
+            self.iface.messageBar().pushMessage(
+                "Nopywer", "nopywer successfully refreshed!", Qgis.Success
+            )
+        else:
+            self.iface.messageBar().pushMessage(
+                "Nopywer",
+                "Failed to refresh nopywer. Check console for errors.",
+                Qgis.Critical,
+            )
