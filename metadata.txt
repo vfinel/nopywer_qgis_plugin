@@ -6,7 +6,7 @@
 name=nopywer
 qgisMinimumVersion=3.0
 description=power grid analysis and design tool
-version=0.1
+version=0.2
 author=Victor Finel
 email=victor.finel.pro@gmail.com
 
