@@ -264,7 +264,9 @@ class NopywerPlugin:
         print(f"DEBUG: Using power scale factor: {scale} (selected unit: {unit})")
 
         # 1. Preview and Export to GeoJSON
-        paths = self.exporter.run_preview(load_layers, cable_layers, power_units_scale=scale)
+        paths = self.exporter.run_preview(
+            load_layers, cable_layers, power_units_scale=scale
+        )
 
         if not paths:
             print("DEBUG: Export failed, no GeoJSON path returned.")
