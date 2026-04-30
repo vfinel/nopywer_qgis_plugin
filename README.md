@@ -1,6 +1,4 @@
 This is a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) directly inside QGIS.
-<<<<<<< HEAD
-=======
 
 # installation 
 
@@ -13,4 +11,3 @@ Logs are visible in two places:
 This will show you exactly what nopywer is calculating, any warnings it generates, and the final result!
 
 # refresh 
->>>>>>> release/0.2
