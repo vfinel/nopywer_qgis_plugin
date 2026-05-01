@@ -40,6 +40,7 @@ from .exporter import NopywerExporter
 from .setup_dependencies import get_venv_python, setup_dependencies
 from .tasks import NopywerAnalysisTask
 from qgis.core import QgsApplication
+from .utils import log_message
 
 
 class NopywerPlugin:
@@ -246,15 +247,12 @@ class NopywerPlugin:
         """This function triggers when the Analysis button is clicked."""
         load_layers = self.get_selected_layers(self.dlg.listNodes)
         cable_layers = self.get_selected_layers(self.dlg.listCables)
-        print(f"{load_layers=}")
-        print(f"{cable_layers=}")
+        log_message(f"Selected load layers: {[l.name() for l in load_layers]}")
+        log_message(f"Selected cable layers: {[l.name() for l in cable_layers]}")
         self.npw_analysis(load_layers, cable_layers)
 
     def npw_analysis(self, load_layers, cable_layers):
-        print(
-            f"DEBUG: npw_analysis called with {len(load_layers)} loads and {len(cable_layers)} cables"
-        )
-        QgsMessageLog.logMessage("npw_analysis triggered", "Nopywer", Qgis.Info)
+        log_message(f"npw_analysis triggered with {len(load_layers)} loads and {len(cable_layers)} cables")
 
         # 0. Get power unit multiplier
         unit = self.dlg.cmbPowerUnits.currentText()
@@ -263,7 +261,7 @@ class NopywerPlugin:
             scale = 1.0
         elif unit == "MW":
             scale = 1000000.0
-        print(f"DEBUG: Using power scale factor: {scale} (selected unit: {unit})")
+        log_message(f"Using power scale factor: {scale} (selected unit: {unit})")
 
         # 1. Preview and Export to GeoJSON
         paths = self.exporter.run_preview(
@@ -271,7 +269,7 @@ class NopywerPlugin:
         )
 
         if not paths:
-            print("DEBUG: Export failed, no GeoJSON path returned.")
+            log_message("Export failed, no GeoJSON path returned.", Qgis.Warning)
             self.iface.messageBar().pushMessage(
                 "Nopywer", "No valid layers selected for export.", Qgis.Warning
             )
@@ -302,13 +300,13 @@ class NopywerPlugin:
         )
 
     def npw_optimize(self):
-        print("warning: optimization is not implemented yet")
+        log_message("Optimization is not implemented yet", Qgis.Warning)
 
     def npw_export(self):
-        print("warning: the export button has no effect yet")
+        log_message("Export button has no effect yet", Qgis.Warning)
 
     def npw_test(self):
-        print("running test")
+        log_message("Running test procedure...")
         layer_names_load = ["test_nodes"]
         layer_names_cable = [
             "test_1phase",
@@ -329,20 +327,25 @@ class NopywerPlugin:
 
     def npw_refresh_lib(self):
         """Force re-install of nopywer library."""
+        log_message("Refreshing nopywer library...", Qgis.Info)
         self.iface.messageBar().pushMessage(
             "Nopywer", "Refreshing nopywer library...", Qgis.Info
         )
 
         # This will block the UI briefly while uv does its magic
+        # We pass force=True to trigger the update logic
         success = setup_dependencies(force=True)
 
         if success:
+            log_message("nopywer successfully refreshed!", Qgis.Success)
             self.iface.messageBar().pushMessage(
                 "Nopywer", "nopywer successfully refreshed!", Qgis.Success
             )
         else:
+            error_msg = "Failed to refresh nopywer. Check console/log for details."
+            log_message(error_msg, Qgis.Critical)
             self.iface.messageBar().pushMessage(
                 "Nopywer",
-                "Failed to refresh nopywer. Check console for errors.",
+                error_msg,
                 Qgis.Critical,
             )
