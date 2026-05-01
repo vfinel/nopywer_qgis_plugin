@@ -28,7 +28,14 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsApplication, QgsMessageLog
+from qgis.core import (
+    QgsProject,
+    QgsVectorLayer,
+    Qgis,
+    QgsApplication,
+    QgsMessageLog,
+    QgsWkbTypes,
+)
 from qgis.PyQt.QtCore import Qt
 
 # Initialize Qt resources from file resources.py
@@ -208,8 +215,8 @@ class NopywerPlugin:
             self.dlg.btnRefresh.clicked.connect(self.npw_refresh_lib)
 
         # --- Populate the lists of layers ---
-        self.populate_layer_list(self.dlg.listNodes)
-        self.populate_layer_list(self.dlg.listCables)
+        self.populate_layer_list(self.dlg.listNodes, self._is_point_layer)
+        self.populate_layer_list(self.dlg.listCables, self._is_line_layer)
         # -------------------------------------------------------
 
         # Show the dialog
@@ -220,18 +227,36 @@ class NopywerPlugin:
         if result:
             pass
 
-    def populate_layer_list(self, list_widget):
-        """Helper to populate a QListWidget with vector layers."""
-        # list_widget.clear()  # do not clear selection each time the plugin is reopened
+    def populate_layer_list(self, list_widget, filter_func=None):
+        """Helper to populate a QListWidget with vector layers.
+
+        Args:
+            list_widget: QListWidget to populate
+            filter_func: Optional function to filter layers. If provided, only layers
+                        where filter_func(layer) returns True will be added.
+        """
         layers = sorted(
             QgsProject.instance().mapLayers().values(), key=lambda layer: layer.name()
         )
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):
-                list_widget.addItem(layer.name())
-                # Store the unique layer ID invisibly
-                item = list_widget.item(list_widget.count() - 1)
-                item.setData(Qt.UserRole, layer.id())
+                if filter_func is None or filter_func(layer):
+                    list_widget.addItem(layer.name())
+                    # Store the unique layer ID invisibly
+                    item = list_widget.item(list_widget.count() - 1)
+                    item.setData(Qt.UserRole, layer.id())
+
+    @staticmethod
+    def _is_point_layer(layer):
+        """Check if a layer contains point or multipoint geometries."""
+        geom_type = layer.geometryType()
+        return geom_type == QgsWkbTypes.PointGeometry
+
+    @staticmethod
+    def _is_line_layer(layer):
+        """Check if a layer contains line or multiline geometries."""
+        geom_type = layer.geometryType()
+        return geom_type == QgsWkbTypes.LineGeometry
 
     def get_selected_layers(self, list_widget):
         """Helper to get actual layer objects from selected list items."""
