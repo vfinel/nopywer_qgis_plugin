@@ -13,6 +13,32 @@ except (ImportError, ValueError):
         print(msg)
 
 
+def write_to_log_file(msg):
+    """Writes messages to a physical log file to survive QGIS crashes."""
+    if sys.platform == "win32":
+        log_dir = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "nopywer")
+    else:
+        log_dir = os.path.join(os.path.expanduser("~"), ".nopywer")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "install.log")
+    try:
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"{msg}\n")
+    except Exception:
+        pass
+
+
+# Intercept all log_message calls and also write them to the physical file
+original_log_message = log_message
+
+
+def log_message(msg, level=None):
+    if level is None:
+        level = 0  # 0 corresponds to Qgis.Info in the QGIS API
+    original_log_message(msg, level)
+    write_to_log_file(msg)
+
+
 def get_qgis_python_executable():
     """Finds the real Python executable, avoiding the QGIS sys.executable quirk (qgis-bin.exe)."""
     executable = sys.executable
@@ -29,91 +55,50 @@ def get_qgis_python_executable():
 
 
 def get_venv_path():
-    """Returns the absolute path to the virtual environment folder.
-
-    This is stored OUTSIDE the plugin directory to prevent QGIS from scanning it
-    as a data source, which would cause crashes and errors.
-    """
-    # Use QGIS config directory or fallback to home
+    """Returns the absolute path to the virtual environment folder."""
     if sys.platform == "win32":
-        # Windows: use AppData\Roaming\nopywer
         base_dir = os.path.join(
             os.path.expanduser("~"), "AppData", "Roaming", "nopywer"
         )
     else:
-        # Linux/Mac: use ~/.nopywer
         base_dir = os.path.join(os.path.expanduser("~"), ".nopywer")
 
-    venv_path = os.path.abspath(os.path.join(base_dir, "venv"))
-    return venv_path
+    return os.path.abspath(os.path.join(base_dir, "venv"))
 
 
 def get_venv_python():
     """Returns the absolute path to the Python executable inside the virtual environment."""
     venv_path = get_venv_path()
-
-    # Platform agnostic path discovery
-    possible_paths = [
-        os.path.join(venv_path, "Scripts", "python.exe"),  # Windows
-        os.path.join(venv_path, "bin", "python"),  # Linux/Mac
-        os.path.join(venv_path, "bin", "python3"),  # Linux/Mac fallback
-    ]
-
-    for path in possible_paths:
-        if os.path.exists(path):
-            return os.path.abspath(path)
-
-    # Fallback default if not created yet
     if sys.platform == "win32":
-        return os.path.abspath(possible_paths[0])
-    return os.path.abspath(possible_paths[1])
+        return os.path.join(venv_path, "Scripts", "python.exe")
+    return os.path.join(venv_path, "bin", "python")
 
 
-def find_uv():
-    """Tries to find the uv executable in common paths."""
-    # 1. Check if already in PATH
-    uv_cmd = shutil.which("uv")
-    if uv_cmd:
-        return uv_cmd
-
-    # 2. Check common installation paths
-    user_home = os.path.expanduser("~")
-    common_paths = [
-        os.path.join(user_home, ".local", "bin", "uv.exe"),
-        os.path.join(user_home, ".local", "bin", "uv"),
-        os.path.join(user_home, ".cargo", "bin", "uv.exe"),
-        os.path.join(user_home, ".cargo", "bin", "uv"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "uv", "uv.exe"),
-    ]
-
-    for path in common_paths:
-        if os.path.exists(path):
-            return path
-
-    return "uv"  # Fallback to name and hope for the best
+def get_venv_uv():
+    """Returns the absolute path to the uv executable inside the virtual environment."""
+    venv_path = get_venv_path()
+    if sys.platform == "win32":
+        return os.path.join(venv_path, "Scripts", "uv.exe")
+    return os.path.join(venv_path, "bin", "uv")
 
 
 def setup_dependencies(force=False, clean=False):
     """
-    Uses uv to create a virtual environment and install nopywer.
-    :param force: If True, runs the install command even if nopywer is present (updates).
-    :param clean: If True, deletes the existing venv first.
+    Creates a venv, installs uv via pip, and uses uv to install nopywer.
+    :param force: If True, forces uv to reinstall nopywer.
+    :param clean: If True, deletes the existing venv entirely first.
     """
     try:
         plugin_dir = os.path.abspath(os.path.dirname(__file__))
         venv_path = get_venv_path()
-        uv_path = find_uv()
         qgis_python = get_qgis_python_executable()
 
-        # Create parent directory for venv if it doesn't exist
-        venv_parent = os.path.dirname(venv_path)
-        os.makedirs(venv_parent, exist_ok=True)
-
-        # Isolate environment
+        # Isolate environment to prevent QGIS path bleeding
         env = os.environ.copy()
         env.pop("PYTHONPATH", None)
         env.pop("PYTHONHOME", None)
 
+        # --- STEP 1: CLEANUP (If requested) ---
         if clean and os.path.exists(venv_path):
             log_message(f"Cleaning: Removing existing venv at {venv_path}...")
             try:
@@ -122,146 +107,97 @@ def setup_dependencies(force=False, clean=False):
                 log_message(f"Could not remove venv: {e}")
                 return False
 
-        # 1. Create venv if needed
+        # --- STEP 2: CREATE VENV ---
         if not os.path.exists(venv_path):
-            # Try uv first (faster), then fall back to standard venv
-            uv_available = (
-                shutil.which(uv_path) is not None if uv_path != "uv" else False
-            )
-
-            if uv_available:
-                log_message("Creating virtual environment using uv...")
-                try:
-                    subprocess.check_call(
-                        [uv_path, "venv", venv_path], cwd=plugin_dir, env=env
-                    )
-                except Exception as e:
-                    log_message(
-                        f"uv venv creation failed, falling back to standard venv: {e}"
-                    )
-                    uv_available = False
-
-            if not uv_available:
-                log_message(
-                    "Creating virtual environment using Python's venv module..."
-                )
-                try:
-                    subprocess.check_call(
-                        [qgis_python, "-m", "venv", venv_path],
-                        cwd=plugin_dir,
-                        env=env,
-                    )
-                except Exception as e:
-                    log_message(f"Failed to create venv: {e}")
-                    return False
-
-                # Try to install uv into the new venv for faster future operations
-                log_message("Installing uv into venv for faster future operations...")
-                try:
-                    subprocess.check_call(
-                        [get_venv_python(), "-m", "pip", "install", "uv"],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        cwd=plugin_dir,
-                        env=env,
-                    )
-                    log_message("uv installed successfully!")
-                    # Update uv_path to use the venv's uv for subsequent operations
-                    if sys.platform == "win32":
-                        uv_path = os.path.join(venv_path, "Scripts", "uv.exe")
-                    else:
-                        uv_path = os.path.join(venv_path, "bin", "uv")
-                except Exception as e:
-                    log_message(f"Could not install uv (optional): {e}")
-                    # This is non-critical, we can still proceed
-
-        python_exe = get_venv_python()
-
-        # 2. Check if nopywer is already installed (skip if not forcing)
-        if not force:
+            log_message("Creating virtual environment...")
+            os.makedirs(os.path.dirname(venv_path), exist_ok=True)
             try:
                 subprocess.check_call(
-                    [python_exe, "-c", "import nopywer"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    [qgis_python, "-m", "venv", venv_path],
+                    cwd=plugin_dir,
                     env=env,
                 )
-                return True
-            except Exception:
-                log_message("nopywer missing or venv broken. Installing...")
-
-        else:
-            log_message("nopywer missing or venv broken. Installing...")
-
-        # 3. Install/Update nopywer from GitHub ZIP
-        try:
-            branch = "qgis_plugin"
-            zip_url = (
-                f"https://github.com/vfinel/nopywer/archive/refs/heads/{branch}.zip"
-            )
-            log_message(f"Refreshing nopywer from branch {branch}...")
-
-            # Determine if uv is available (system or venv)
-            uv_available = False
-            if os.path.exists(uv_path):
-                uv_available = True
-            elif shutil.which(uv_path) is not None and uv_path != "uv":
-                uv_available = True
-
-            if uv_available:
-                cmd = [
-                    uv_path,
-                    "pip",
-                    "install",
-                    "--python",
-                    python_exe,
-                    "--force-reinstall",
-                    zip_url,
-                ]
-
-                if force:
-                    cmd.append("--refresh")
-
-                log_message("Installing with uv...")
-                result = subprocess.run(
-                    cmd, cwd=plugin_dir, capture_output=True, text=True, env=env
-                )
-
-                if result.returncode != 0:
-                    log_message(
-                        "uv pip install failed, falling back to standard pip..."
-                    )
-                    uv_available = False
-
-            if not uv_available:
-                cmd = [
-                    python_exe,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--force-reinstall",
-                    "--upgrade",
-                    zip_url,
-                ]
-
-                log_message("Installing with pip...")
-                result = subprocess.run(
-                    cmd, cwd=plugin_dir, capture_output=True, text=True, env=env
-                )
-
-            if result.returncode != 0:
-                log_message(f"pip install failed with exit code {result.returncode}")
-                log_message(f"STDOUT: {result.stdout}")
-                log_message(f"STDERR: {result.stderr}")
+            except Exception as e:
+                log_message(f"Failed to create venv: {e}")
                 return False
 
-            log_message("Successfully installed/updated nopywer!")
-            return True
+        venv_python = get_venv_python()
+        uv_exe = get_venv_uv()
 
-        except Exception as e:
-            log_message(f"Unexpected error during nopywer installation: {e}")
-            log_message(f"Traceback:\n{traceback.format_exc()}")
+        # --- STEP 3: INSTALL UV (Via native pip) ---
+        if not os.path.exists(uv_exe):
+            log_message("Bootstrapping 'uv' package manager inside venv...")
+            try:
+                result = subprocess.run(
+                    [venv_python, "-m", "pip", "install", "uv"],
+                    capture_output=True,
+                    text=True,
+                    cwd=plugin_dir,
+                    env=env,
+                )
+                if result.returncode != 0:
+                    log_message(
+                        f"Failed to install uv. STDOUT: {result.stdout} STDERR: {result.stderr}"
+                    )
+                    return False
+            except Exception as e:
+                log_message(f"Failed to install uv: {e}")
+                return False
+
+        # --- STEP 4: VERIFY NOPYWER STATUS ---
+        if not force:
+            try:
+                # CRITICAL FIX: We must check nopywer.cli to ensure it's not a broken/empty folder
+                result = subprocess.run(
+                    [venv_python, "-c", "import nopywer.cli"],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                )
+                if result.returncode == 0:
+                    return True  # It's fully installed and working!
+                else:
+                    log_message(
+                        f"nopywer check failed (this is normal on fresh install). Output: {result.stderr.strip()}"
+                    )
+                    log_message(
+                        "nopywer missing or incomplete. Proceeding to install..."
+                    )
+            except Exception as e:
+                log_message(f"nopywer verification exception: {e}")
+                log_message("nopywer missing or incomplete. Proceeding to install...")
+
+        # --- STEP 5: INSTALL NOPYWER (Via blazing fast uv) ---
+        branch = "qgis_plugin"
+        zip_url = f"https://github.com/vfinel/nopywer/archive/refs/heads/{branch}.zip"
+
+        log_message(f"Installing nopywer from branch '{branch}' using uv...")
+
+        cmd = [
+            uv_exe,
+            "pip",
+            "install",
+            "--python",
+            venv_python,
+            "--force-reinstall",
+            zip_url,
+        ]
+
+        if force:
+            cmd.append("--refresh")
+
+        result = subprocess.run(
+            cmd, cwd=plugin_dir, capture_output=True, text=True, env=env
+        )
+
+        if result.returncode != 0:
+            log_message(f"uv pip install failed with exit code {result.returncode}")
+            log_message(f"STDOUT: {result.stdout}")
+            log_message(f"STDERR: {result.stderr}")
             return False
+
+        log_message("Successfully installed/updated nopywer!")
+        return True
 
     except Exception as e:
         log_message(f"Unexpected error during setup_dependencies: {e}")

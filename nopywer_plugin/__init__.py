@@ -23,45 +23,58 @@
  This script initializes the plugin, making it known to QGIS.
 """
 
+from .setup_dependencies import setup_dependencies
+from .utils import log_message
 
-# noinspection PyPep8Naming
-def classFactory(iface):  # pylint: disable=invalid-name
-    """Load NopywerPlugin class from file NopywerPlugin.
+from qgis.core import Qgis
 
-    :param iface: A QGIS interface instance.
-    :type iface: QgsInterface
-    """
+
+# This runs the moment the user checks the box in the Plugin Manager
+def classFactory(iface):
     try:
-        from .setup_dependencies import setup_dependencies, get_venv_python
-        from .utils import log_message
-        from qgis.core import Qgis
-        import os
+        # 1. Try to set up dependencies
+        if not setup_dependencies(force=False, clean=False):
+            # If it fails, log the error AND STOP.
+            # Do not attempt to import NopywerPlugin.
+            log_message(
+                "CRITICAL: Dependencies failed to install. The nopywer plugin will not load.",
+                level=Qgis.Critical,
+            )
 
-        # Ensure dependencies are set up
-        venv_path = get_venv_python()
-        if not os.path.exists(os.path.dirname(venv_path)):
-            # Venv doesn't exist, try to create it
-            if not setup_dependencies():
-                log_message(
-                    "Warning: Plugin dependencies could not be installed.",
-                    level=Qgis.Warning,
-                )
+            # Return a dummy object so QGIS doesn't crash, but the plugin just stays hidden.
+            class DummyPlugin:
+                def __init__(self, iface):
+                    pass
 
-        # load nopywer plugin class
+                def initGui(self):
+                    pass
+
+                def unload(self):
+                    pass
+
+            return DummyPlugin(iface)
+
+        # 2. Only import the main plugin IF dependencies succeeded
         from .nopywer_plugin import NopywerPlugin
 
         return NopywerPlugin(iface)
 
     except Exception as e:
-        # Catch any initialization errors and log them
         import traceback
 
-        try:
-            from .utils import log_message
-            from qgis.core import Qgis
+        log_message(
+            f"Critical error loading nopywer plugin: {str(e)}", level=Qgis.Critical
+        )
+        log_message(f"Traceback:\n{traceback.format_exc()}", level=Qgis.Critical)
 
-        except Exception as e:
-            log_message(
-                f"Critical error loading nopywer plugin: {str(e)}", level=Qgis.Critical
-            )
-            log_message(f"Traceback:\n{traceback.format_exc()}", level=Qgis.Critical)
+        class DummyPlugin:
+            def __init__(self, iface):
+                pass
+
+            def initGui(self):
+                pass
+
+            def unload(self):
+                pass
+
+        return DummyPlugin(iface)
