@@ -37,7 +37,7 @@ def find_uv():
     uv_cmd = shutil.which("uv")
     if uv_cmd:
         return uv_cmd
-        
+
     # 2. Check common installation paths
     user_home = os.path.expanduser("~")
     common_paths = [
@@ -47,12 +47,13 @@ def find_uv():
         os.path.join(user_home, ".cargo", "bin", "uv"),
         os.path.join(os.environ.get("LOCALAPPDATA", ""), "uv", "uv.exe"),
     ]
-    
+
     for path in common_paths:
         if os.path.exists(path):
             return path
-            
-    return "uv" # Fallback to name and hope for the best
+
+    return "uv"  # Fallback to name and hope for the best
+
 
 def setup_dependencies(force=False, clean=False):
     """
@@ -63,12 +64,12 @@ def setup_dependencies(force=False, clean=False):
     plugin_dir = os.path.abspath(os.path.dirname(__file__))
     venv_path = get_venv_path()
     uv_path = find_uv()
-    
+
     # Isolate environment
     env = os.environ.copy()
-    env.pop('PYTHONPATH', None)
-    env.pop('PYTHONHOME', None)
-    
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
+
     if clean and os.path.exists(venv_path):
         print(f"Cleaning: Removing existing venv at {venv_path}...")
         try:
@@ -95,7 +96,7 @@ def setup_dependencies(force=False, clean=False):
                 [python_exe, "-c", "import nopywer"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                env=env
+                env=env,
             )
             return True
         except:
@@ -113,19 +114,15 @@ def setup_dependencies(force=False, clean=False):
     try:
         # Use uv pip install on the ZIP URL
         cmd = [uv_path, "pip", "install", "--python", python_exe, zip_url]
-        
+
         # If forcing, we want to ensure we get the latest ZIP content
         if force:
             cmd.append("--refresh")
 
         result = subprocess.run(
-            cmd, 
-            cwd=plugin_dir,
-            capture_output=True,
-            text=True,
-            env=env
+            cmd, cwd=plugin_dir, capture_output=True, text=True, env=env
         )
-        
+
         if result.returncode != 0:
             print(f"uv pip install failed with exit code {result.returncode}")
             print(f"STDOUT: {result.stdout}")
