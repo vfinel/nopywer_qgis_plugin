@@ -3,6 +3,14 @@ import subprocess
 import os
 import shutil
 
+# Attempt to import log_message from .utils
+try:
+    from .utils import log_message
+except (ImportError, ValueError):
+    # Fallback to a simple print if utils is not available (e.g. standalone run)
+    def log_message(msg, level=None):
+        print(msg)
+
 
 def get_venv_path():
     """Returns the absolute path to the virtual environment folder."""
@@ -36,7 +44,7 @@ def find_uv():
     uv_cmd = shutil.which("uv")
     if uv_cmd:
         return uv_cmd
-        
+
     # 2. Check common installation paths
     user_home = os.path.expanduser("~")
     common_paths = [
@@ -46,12 +54,13 @@ def find_uv():
         os.path.join(user_home, ".cargo", "bin", "uv"),
         os.path.join(os.environ.get("LOCALAPPDATA", ""), "uv", "uv.exe"),
     ]
-    
+
     for path in common_paths:
         if os.path.exists(path):
             return path
-            
-    return "uv" # Fallback to name and hope for the best
+
+    return "uv"  # Fallback to name and hope for the best
+
 
 def setup_dependencies(force=False, clean=False):
     """
@@ -62,27 +71,27 @@ def setup_dependencies(force=False, clean=False):
     plugin_dir = os.path.abspath(os.path.dirname(__file__))
     venv_path = get_venv_path()
     uv_path = find_uv()
-    
+
     # Isolate environment
     env = os.environ.copy()
-    env.pop('PYTHONPATH', None)
-    env.pop('PYTHONHOME', None)
-    
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
+
     if clean and os.path.exists(venv_path):
-        print(f"Cleaning: Removing existing venv at {venv_path}...")
+        log_message(f"Cleaning: Removing existing venv at {venv_path}...")
         try:
             shutil.rmtree(venv_path)
         except Exception as e:
-            print(f"Could not remove venv: {e}")
+            log_message(f"Could not remove venv: {e}")
             return False
 
     # 1. Create venv if needed
     if not os.path.exists(venv_path):
-        print(f"Creating virtual environment using {uv_path}...")
+        log_message(f"Creating virtual environment using {uv_path}...")
         try:
             subprocess.check_call([uv_path, "venv", venv_path], cwd=plugin_dir, env=env)
         except Exception as e:
-            print(f"Failed to create venv: {e}")
+            log_message(f"Failed to create venv: {e}")
             return False
 
     python_exe = get_venv_python()
@@ -94,47 +103,54 @@ def setup_dependencies(force=False, clean=False):
                 [python_exe, "-c", "import nopywer"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                env=env
+                env=env,
             )
             return True
         except:
-            print("nopywer missing or venv broken. Installing...")
+            log_message("nopywer missing or venv broken. Installing...")
 
     # 3. Install/Update nopywer from GitHub ZIP
     branch = "qgis_plugin"
     zip_url = f"https://github.com/vfinel/nopywer/archive/refs/heads/{branch}.zip"
 
     if force:
-        print(f"Refreshing nopywer from {zip_url}...")
+        log_message(f"Refreshing nopywer from branch {branch}...")
     else:
-        print(f"Installing nopywer from {zip_url}...")
+        log_message(f"Installing nopywer from branch {branch}...")
 
     try:
         # Use uv pip install on the ZIP URL
-        cmd = [uv_path, "pip", "install", "--python", python_exe, zip_url]
-        
-        # If forcing, we want to ensure we get the latest ZIP content
+        # --force-reinstall ensures that even if the version is the same, it's replaced
+        # --refresh ensures that uv re-downloads the ZIP content
+        cmd = [
+            uv_path,
+            "pip",
+            "install",
+            "--python",
+            python_exe,
+            "--force-reinstall",
+            zip_url,
+        ]
+
         if force:
             cmd.append("--refresh")
 
+        log_message(f"Running command: {' '.join(cmd)}")
+
         result = subprocess.run(
-            cmd, 
-            cwd=plugin_dir,
-            capture_output=True,
-            text=True,
-            env=env
+            cmd, cwd=plugin_dir, capture_output=True, text=True, env=env
         )
-        
+
         if result.returncode != 0:
-            print(f"uv pip install failed with exit code {result.returncode}")
-            print(f"STDOUT: {result.stdout}")
-            print(f"STDERR: {result.stderr}")
+            log_message(f"uv pip install failed with exit code {result.returncode}")
+            log_message(f"STDOUT: {result.stdout}")
+            log_message(f"STDERR: {result.stderr}")
             return False
 
-        print("Successfully installed nopywer!")
+        log_message("Successfully installed/updated nopywer!")
         return True
     except Exception as e:
-        print(f"Failed to execute install command: {e}")
+        log_message(f"Failed to execute install command: {e}")
         return False
 
 

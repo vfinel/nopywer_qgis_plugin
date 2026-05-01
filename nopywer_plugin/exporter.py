@@ -11,13 +11,16 @@ from qgis.core import (
 )
 
 
+from .utils import log_message
+
+
 class NopywerExporter:
     def __init__(self, project=None):
         self.project = project or QgsProject.instance()
         self.da = QgsDistanceArea()
         self.da.setSourceCrs(self.project.crs(), self.project.transformContext())
         self.da.setEllipsoid(self.project.ellipsoid())
-        
+
         # Target CRS for nopywer (WGS 84 degrees)
         self.target_crs_id = "EPSG:4326"
         self.target_crs = QgsCoordinateReferenceSystem(self.target_crs_id)
@@ -84,7 +87,7 @@ class NopywerExporter:
                     # Force lowercase "generator" in the name for nopywer's detection
                     if "generator" not in str(props["name"]):
                         props["name"] = str(props["name"]) + " generator"
-                    print(f" [FOUND] Generator detected: '{props['name']}'")
+                    log_message(f" [FOUND] Generator detected: '{props['name']}'")
 
             # 3. Create Feature dict
             geom_json = json.loads(geom.asJson())
@@ -122,7 +125,11 @@ class NopywerExporter:
         for layer in load_layers:
             valid, _ = self.validate_layer(layer, ["name", "power"])
             if valid:
-                all_features.extend(self.get_features_as_dict(layer, is_cable=False, power_units_scale=power_units_scale))
+                all_features.extend(
+                    self.get_features_as_dict(
+                        layer, is_cable=False, power_units_scale=power_units_scale
+                    )
+                )
 
         # Process Cables
         for layer in cable_layers:
@@ -149,13 +156,13 @@ class NopywerExporter:
         with os.fdopen(fd, "w") as f:
             json.dump(geojson_data, f, indent=2)
 
-        print(f"geoJSON file written: {input_path}")
+        log_message(f"geoJSON file written: {input_path}")
 
         # Also write to home directory for easy access
         home_export = os.path.join(os.path.expanduser("~"), "nopywer_export.geojson")
         with open(home_export, "w") as f:
             json.dump(geojson_data, f, indent=2)
-        print(f"Copy also saved to: {home_export}")
+        log_message(f"Copy also saved to: {home_export}")
 
         # define an output file for nopywer outputs
         _, output_path = tempfile.mkstemp(suffix=".geojson", prefix="nopywer_output_")
@@ -163,37 +170,45 @@ class NopywerExporter:
 
     def run_preview(self, load_layers, cable_layers, power_units_scale=1.0):
         """Prints the validation and data preview to console."""
-        print("\n" + "=" * 40)
-        print(" NOPYWER EXPORTER PREVIEW")
-        print("=" * 40)
+        print_debug = False
+        if print_debug:
+            log_message("\n" + "=" * 40)
+            log_message(" NOPYWER EXPORTER PREVIEW")
+            log_message("=" * 40)
 
-        # Process Loads
-        print(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
+            # Process Loads
+            log_message(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
+
         for layer in load_layers:
             valid, missing = self.validate_layer(layer, ["name", "power"])
-            if valid:
-                print(f" [OK] Layer: {layer.name()}")
-                self.print_layer_data(layer)
-            else:
-                print(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
+            if print_debug:
+                if valid:
+                    log_message(f" [OK] Layer: {layer.name()}")
+                    self.print_layer_data(layer)
+                else:
+                    log_message(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
 
         # Process Cables
-        print(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
+        if print_debug:
+            log_message(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
         for layer in cable_layers:
             valid, missing = self.validate_layer(layer, ["area", "plugs&sockets"])
-            if valid:
-                print(f" [OK] Layer: {layer.name()}")
-                self.print_layer_data(layer)
-            else:
-                print(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
+            if print_debug:
+                if valid:
+                    log_message(f" [OK] Layer: {layer.name()}")
+                    self.print_layer_data(layer)
+                else:
+                    log_message(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
 
-        path_tuple = self.export_to_temp_geojson(load_layers, cable_layers, power_units_scale=power_units_scale)
+        path_tuple = self.export_to_temp_geojson(
+            load_layers, cable_layers, power_units_scale=power_units_scale
+        )
+
         if path_tuple:
             input_path, output_path = path_tuple
-            print("\n" + "-" * 40)
-            print(f" Export saved to: {input_path}")
-            print("-" * 40)
+            log_message(f" Export saved to: {input_path}")
             return input_path, output_path
+
         return None
 
     def print_layer_data(self, layer):
@@ -201,11 +216,13 @@ class NopywerExporter:
         fields = layer.fields()
         field_names = [field.name() for field in fields]
 
-        print(f"  Field Names: {field_names}")
-        print(f"  Feature Count: {layer.featureCount()}")
+        log_message(f"  Field Names: {field_names}")
+        log_message(f"  Feature Count: {layer.featureCount()}")
 
         for i, feature in enumerate(layer.getFeatures()):
-            print(f"    [Feature {i}] {feature.attributes()}")
+            log_message(f"    [Feature {i}] {feature.attributes()}")
             if i >= 19:
-                print(f"    ... (Only showing first 20 features for {layer.name()})")
+                log_message(
+                    f"    ... (Only showing first 20 features for {layer.name()})"
+                )
                 break

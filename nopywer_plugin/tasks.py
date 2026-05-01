@@ -5,6 +5,9 @@ import os
 from qgis.core import QgsTask, QgsMessageLog, Qgis
 
 
+from .utils import log_message
+
+
 class NopywerAnalysisTask(QgsTask):
     def __init__(self, description, python_exe, input_geojson, output_geojson):
         super().__init__(description, QgsTask.CanCancel)
@@ -18,9 +21,7 @@ class NopywerAnalysisTask(QgsTask):
         """
         This runs in a background thread.
         """
-        QgsMessageLog.logMessage(
-            "Task started: run() executing...", "Nopywer", Qgis.Info
-        )
+        log_message("Task started: run() executing...")
         try:
             # We must isolate the environment. QGIS sets PYTHONPATH/PYTHONHOME
             # which can cause conflicts ("SRE module mismatch") in the venv.
@@ -34,11 +35,7 @@ class NopywerAnalysisTask(QgsTask):
             if os.name == "nt":
                 analyze_exe += ".exe"
 
-            QgsMessageLog.logMessage(
-                f"Executing command: {analyze_exe} {self.input_geojson}",
-                "Nopywer",
-                Qgis.Info,
-            )
+            log_message(f"Executing command: {analyze_exe} {self.input_geojson}")
 
             # Check if the executable exists
             if not os.path.exists(analyze_exe):
@@ -76,50 +73,31 @@ class NopywerAnalysisTask(QgsTask):
             if process.returncode != 0:
                 raise Exception(f"Nopywer failed with return code {process.returncode}")
 
-            QgsMessageLog.logMessage(
-                "Subprocess finished successfully", "Nopywer", Qgis.Info
-            )
+            log_message("Subprocess finished successfully")
             return True
 
         except Exception as e:
             self.exception = e
-            QgsMessageLog.logMessage(
-                f"Subprocess failed with exception: {e}", "Nopywer", Qgis.Critical
-            )
+            log_message(f"Subprocess failed with exception: {e}", Qgis.Critical)
             return False
 
     def finished(self, result):
         """
         This runs in the main GUI thread when run() returns.
         """
-        print(f"DEBUG: Task finished. Result: {result}")
-        QgsMessageLog.logMessage(
-            f"Task finished. result={result}", "Nopywer", Qgis.Info
-        )
+        log_message(f"Task finished. result={result}")
 
         if self.output_data:
-            # Print to the Python Console
-            print("\n" + "=" * 20 + " NOPYWER OUTPUT " + "=" * 20)
-            print(self.output_data)
-            print("=" * 56 + "\n")
-
-            # Log to the Nopywer tab in QGIS Log Messages
-            QgsMessageLog.logMessage(
-                f"Backend Output:\n{self.output_data}", "Nopywer", Qgis.Info
-            )
+            # log_message already handles tab replacement and printing to console
+            log_message(f"nopywer output:\n{self.output_data}")
 
         if result:
-            QgsMessageLog.logMessage(
-                "Nopywer Analysis Finished Successfully!", "Nopywer", Qgis.Success
-            )
+            log_message("Nopywer Analysis Finished Successfully!", Qgis.Success)
         else:
             # Log the error and stderr if it failed
             error_msg = f"Nopywer Analysis Failed: {self.exception}"
-            print(f"ERROR: {error_msg}")
-            QgsMessageLog.logMessage(error_msg, "Nopywer", Qgis.Critical)
+            log_message(error_msg, Qgis.Critical)
 
     def cancel(self):
-        QgsMessageLog.logMessage(
-            f"Nopywer Analysis Cancelled by user", "Nopywer", Qgis.Info
-        )
+        log_message("Nopywer Analysis Cancelled by user", Qgis.Info)
         super().cancel()
