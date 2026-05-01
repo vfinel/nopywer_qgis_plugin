@@ -31,16 +31,37 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    from .setup_dependencies import setup_dependencies, get_venv_python
-    from .utils import log_message
-    from qgis.core import Qgis
-    import os
+    try:
+        from .setup_dependencies import setup_dependencies, get_venv_python
+        from .utils import log_message
+        from qgis.core import Qgis
+        import os
 
-    # Fast check: only run setup if venv is missing
-    if not os.path.exists(get_venv_python()):
-        if not setup_dependencies():
-            log_message("Warning: Plugin dependencies could not be resolved.", level=Qgis.Critical)
+        # Ensure dependencies are set up
+        venv_path = get_venv_python()
+        if not os.path.exists(os.path.dirname(venv_path)):
+            # Venv doesn't exist, try to create it
+            if not setup_dependencies():
+                log_message(
+                    "Warning: Plugin dependencies could not be installed.",
+                    level=Qgis.Warning,
+                )
 
-    from .nopywer_plugin import NopywerPlugin
+        # load nopywer plugin class
+        from .nopywer_plugin import NopywerPlugin
 
-    return NopywerPlugin(iface)
+        return NopywerPlugin(iface)
+
+    except Exception as e:
+        # Catch any initialization errors and log them
+        import traceback
+
+        try:
+            from .utils import log_message
+            from qgis.core import Qgis
+
+        except Exception as e:
+            log_message(
+                f"Critical error loading nopywer plugin: {str(e)}", level=Qgis.Critical
+            )
+            log_message(f"Traceback:\n{traceback.format_exc()}", level=Qgis.Critical)
