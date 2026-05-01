@@ -6,8 +6,7 @@ import shutil
 
 def get_venv_path():
     """Returns the absolute path to the virtual environment folder."""
-    root_folder = os.path.dirname(os.path.dirname(__file__))
-    return os.path.abspath(os.path.join(root_folder, ".venv"))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".venv"))
 
 
 def get_venv_python():
@@ -113,9 +112,18 @@ def setup_dependencies(force=False, clean=False):
 
     try:
         # Use uv pip install on the ZIP URL
-        cmd = [uv_path, "pip", "install", "--python", python_exe, zip_url]
+        # --force-reinstall ensures that even if the version is the same, it's replaced
+        # --refresh ensures that uv re-downloads the ZIP content
+        cmd = [
+            uv_path,
+            "pip",
+            "install",
+            "--python",
+            python_exe,
+            "--force-reinstall",
+            zip_url,
+        ]
 
-        # If forcing, we want to ensure we get the latest ZIP content
         if force:
             cmd.append("--refresh")
 

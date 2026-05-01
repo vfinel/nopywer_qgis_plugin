@@ -44,7 +44,8 @@ PLUGINNAME = nopywer_plugin
 
 PY_FILES = \
 	__init__.py \
-	nopywer_plugin.py nopywer_plugin_dialog.py
+	nopywer_plugin.py nopywer_plugin_dialog.py \
+	exporter.py setup_dependencies.py tasks.py utils.py
 
 UI_FILES = nopywer_plugin_dialog_base.ui
 
