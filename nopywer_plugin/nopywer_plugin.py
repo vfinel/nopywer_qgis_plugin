@@ -222,7 +222,9 @@ class NopywerPlugin:
     def populate_layer_list(self, list_widget):
         """Helper to populate a QListWidget with vector layers."""
         # list_widget.clear()  # do not clear selection each time the plugin is reopened
-        layers = QgsProject.instance().mapLayers().values()
+        layers = sorted(
+            QgsProject.instance().mapLayers().values(), key=lambda layer: layer.name()
+        )
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):
                 list_widget.addItem(layer.name())
