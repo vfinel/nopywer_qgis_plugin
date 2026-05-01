@@ -13,6 +13,21 @@ except (ImportError, ValueError):
         print(msg)
 
 
+def get_qgis_python_executable():
+    """Finds the real Python executable, avoiding the QGIS sys.executable quirk (qgis-bin.exe)."""
+    executable = sys.executable
+    if "python" in os.path.basename(executable).lower():
+        return executable
+    if sys.platform == "win32":
+        py_path = os.path.join(sys.exec_prefix, "python.exe")
+        if os.path.exists(py_path):
+            return py_path
+        py_path_bin = os.path.join(sys.exec_prefix, "bin", "python.exe")
+        if os.path.exists(py_path_bin):
+            return py_path_bin
+    return os.path.join(sys.exec_prefix, "bin", "python3")
+
+
 def get_venv_path():
     """Returns the absolute path to the virtual environment folder.
 
@@ -30,8 +45,6 @@ def get_venv_path():
         base_dir = os.path.join(os.path.expanduser("~"), ".nopywer")
 
     venv_path = os.path.abspath(os.path.join(base_dir, "venv"))
-    print(f"{venv_path=}")
-
     return venv_path
 
 
@@ -90,6 +103,7 @@ def setup_dependencies(force=False, clean=False):
         plugin_dir = os.path.abspath(os.path.dirname(__file__))
         venv_path = get_venv_path()
         uv_path = find_uv()
+        qgis_python = get_qgis_python_executable()
 
         # Create parent directory for venv if it doesn't exist
         venv_parent = os.path.dirname(venv_path)
@@ -133,7 +147,7 @@ def setup_dependencies(force=False, clean=False):
                 )
                 try:
                     subprocess.check_call(
-                        [sys.executable, "-m", "venv", venv_path],
+                        [qgis_python, "-m", "venv", venv_path],
                         cwd=plugin_dir,
                         env=env,
                     )
