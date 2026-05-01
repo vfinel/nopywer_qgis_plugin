@@ -20,7 +20,7 @@ class NopywerExporter:
         self.da = QgsDistanceArea()
         self.da.setSourceCrs(self.project.crs(), self.project.transformContext())
         self.da.setEllipsoid(self.project.ellipsoid())
-        
+
         # Target CRS for nopywer (WGS 84 degrees)
         self.target_crs_id = "EPSG:4326"
         self.target_crs = QgsCoordinateReferenceSystem(self.target_crs_id)
@@ -125,7 +125,11 @@ class NopywerExporter:
         for layer in load_layers:
             valid, _ = self.validate_layer(layer, ["name", "power"])
             if valid:
-                all_features.extend(self.get_features_as_dict(layer, is_cable=False, power_units_scale=power_units_scale))
+                all_features.extend(
+                    self.get_features_as_dict(
+                        layer, is_cable=False, power_units_scale=power_units_scale
+                    )
+                )
 
         # Process Cables
         for layer in cable_layers:
@@ -166,37 +170,45 @@ class NopywerExporter:
 
     def run_preview(self, load_layers, cable_layers, power_units_scale=1.0):
         """Prints the validation and data preview to console."""
-        log_message("\n" + "=" * 40)
-        log_message(" NOPYWER EXPORTER PREVIEW")
-        log_message("=" * 40)
+        print_debug = False
+        if print_debug:
+            log_message("\n" + "=" * 40)
+            log_message(" NOPYWER EXPORTER PREVIEW")
+            log_message("=" * 40)
 
-        # Process Loads
-        log_message(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
+            # Process Loads
+            log_message(f"\n>>> LOAD LAYERS ({len(load_layers)}) <<<")
+
         for layer in load_layers:
             valid, missing = self.validate_layer(layer, ["name", "power"])
-            if valid:
-                log_message(f" [OK] Layer: {layer.name()}")
-                self.print_layer_data(layer)
-            else:
-                log_message(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
+            if print_debug:
+                if valid:
+                    log_message(f" [OK] Layer: {layer.name()}")
+                    self.print_layer_data(layer)
+                else:
+                    log_message(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
 
         # Process Cables
-        log_message(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
+        if print_debug:
+            log_message(f"\n>>> CABLE LAYERS ({len(cable_layers)}) <<<")
         for layer in cable_layers:
             valid, missing = self.validate_layer(layer, ["area", "plugs&sockets"])
-            if valid:
-                log_message(f" [OK] Layer: {layer.name()}")
-                self.print_layer_data(layer)
-            else:
-                log_message(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
+            if print_debug:
+                if valid:
+                    log_message(f" [OK] Layer: {layer.name()}")
+                    self.print_layer_data(layer)
+                else:
+                    log_message(f" [!] ERR: Layer '{layer.name()}' missing: {missing}")
 
-        path_tuple = self.export_to_temp_geojson(load_layers, cable_layers, power_units_scale=power_units_scale)
+        path_tuple = self.export_to_temp_geojson(
+            load_layers, cable_layers, power_units_scale=power_units_scale
+        )
+
         if path_tuple:
             input_path, output_path = path_tuple
-            log_message("\n" + "-" * 40)
             log_message(f" Export saved to: {input_path}")
-            log_message("-" * 40)
             return input_path, output_path
+
         return None
 
     def print_layer_data(self, layer):
@@ -210,5 +222,7 @@ class NopywerExporter:
         for i, feature in enumerate(layer.getFeatures()):
             log_message(f"    [Feature {i}] {feature.attributes()}")
             if i >= 19:
-                log_message(f"    ... (Only showing first 20 features for {layer.name()})")
+                log_message(
+                    f"    ... (Only showing first 20 features for {layer.name()})"
+                )
                 break

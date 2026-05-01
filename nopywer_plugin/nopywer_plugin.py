@@ -252,7 +252,9 @@ class NopywerPlugin:
         self.npw_analysis(load_layers, cable_layers)
 
     def npw_analysis(self, load_layers, cable_layers):
-        log_message(f"npw_analysis triggered with {len(load_layers)} loads and {len(cable_layers)} cables")
+        log_message(
+            f"npw_analysis triggered with {len(load_layers)} load layer(s) and {len(cable_layers)} cable layer(s)"
+        )
 
         # 0. Get power unit multiplier
         unit = self.dlg.cmbPowerUnits.currentText()

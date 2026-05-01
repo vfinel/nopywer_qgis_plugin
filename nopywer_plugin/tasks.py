@@ -89,7 +89,7 @@ class NopywerAnalysisTask(QgsTask):
 
         if self.output_data:
             # log_message already handles tab replacement and printing to console
-            log_message(f"Backend Output:\n{self.output_data}")
+            log_message(f"nopywer output:\n{self.output_data}")
 
         if result:
             log_message("Nopywer Analysis Finished Successfully!", Qgis.Success)
