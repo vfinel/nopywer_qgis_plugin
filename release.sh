@@ -2,11 +2,9 @@
 
 """
 USAGE: 
-./release 0.2.4    !! not v0.2.4
-TODO:
-  - remove 'v' from input 
-  - add release commit message ? (instead of 'bumped to...') 
-  - add changelog ? (see make a changelog?)
+./release.sh 0.2.4
+./release.sh v0.2.4
+./release.sh 0.2.4 "Custom commit message"
 """
 
 # Exit immediately if a command exits with a non-zero status
@@ -19,7 +17,8 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-NEW_VERSION=$1
+NEW_VERSION="${1#v}"
+COMMIT_MESSAGE="${2:-Bump version to $NEW_VERSION for release}"
 PLUGIN_DIR="nopywer_plugin" # Updated folder name
 METADATA_FILE="$PLUGIN_DIR/metadata.txt"
 
@@ -32,7 +31,7 @@ echo "✅ Updated metadata.txt to version $NEW_VERSION"
 
 # 2. Stage and commit the change
 git add $METADATA_FILE
-git commit -m "Bump version to $NEW_VERSION for release"
+git commit -m "$COMMIT_MESSAGE"
 echo "✅ Committed metadata update"
 
 # 3. Create the git tag
