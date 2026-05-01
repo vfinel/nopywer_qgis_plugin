@@ -5,7 +5,7 @@ This is a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) direct
 - Go to Plugins > Manage and Install Plugins... > Settings > "Plugin Repositories" > Add....
     - Name it whatever you like (e.g., "Nopywer Release Repo").
     - For the URL, paste this exact link: https://github.com/vfinel/nopywer_qgis_plugin/releases/latest/download/plugins.xml
-        - /!\ make to remove the `http://` prefix already written, you need `https://` /!\ 
+        - /!\ make sure to remove the `http://` prefix already written, you need `https://` instead
         - if you see the message `Unable to Get Local Issuer Certificate: The issuer certificate of a locally looked up certificate could not be found` you can click `Ignore`
     - close the `Settings` panel 
 
@@ -24,12 +24,12 @@ Make sure that your layers have the following properties:
 ## run analysis 
 - open the plugin 
 - select your layers (nodes layer(s) and cable layer(s))
-- click "Run analysis" 
+- click `Run analysis`
 
 ## see nopywer logs 
 Logs are visible in two places: 
 - Log Messages Panel: Go to View -> Panels -> Log Messages (or click the speech bubble in the bottom right corner of QGIS) and select the "Nopywer" tab.
-- QGIS Python Console: It will print a formatted block with the nopywer output.
+- QGIS Python Console: Go to Plugins -> Python console (or Ctrl + Alt + P)
 
 This will show you exactly what nopywer is calculating, any warnings it generates, and the final result!
 

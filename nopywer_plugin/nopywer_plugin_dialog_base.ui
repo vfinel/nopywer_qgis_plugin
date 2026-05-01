@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>370</y>
+     <y>360</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -42,20 +42,7 @@
     <string>Run analysis</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="btnOptimize">
-   <property name="geometry">
-    <rect>
-     <x>240</x>
-     <y>100</y>
-     <width>93</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Optimize grid</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_3">
+  <widget class="QLabel" name="label_logs">
    <property name="geometry">
     <rect>
      <x>20</x>
@@ -79,19 +66,6 @@
    </property>
    <property name="text">
     <string>Run test</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btnExport">
-   <property name="geometry">
-    <rect>
-     <x>240</x>
-     <y>150</y>
-     <width>93</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>to geoJSON</string>
    </property>
   </widget>
   <widget class="QWidget" name="layoutWidget">
@@ -138,7 +112,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>260</y>
+     <y>250</y>
      <width>101</width>
      <height>22</height>
     </rect>
@@ -159,11 +133,11 @@
     </property>
    </item>
   </widget>
-  <widget class="QLabel" name="label_4">
+  <widget class="QLabel" name="label_power_units">
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>240</y>
+     <y>230</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -171,6 +145,65 @@
    <property name="text">
     <string>Power units</string>
    </property>
+  </widget>
+  <widget class="QLabel" name="label_developers">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>310</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Developer tools</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_actions">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>20</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>nopywer actions</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>110</y>
+     <width>95</width>
+     <height>88</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QLabel" name="label_experimental">
+      <property name="text">
+       <string>Experimental :</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnOptimize">
+      <property name="text">
+       <string>Optimize grid</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnExport">
+      <property name="text">
+       <string>to geoJSON</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>

@@ -28,7 +28,14 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorLayer, Qgis, QgsApplication, QgsMessageLog
+from qgis.core import (
+    QgsProject,
+    QgsVectorLayer,
+    Qgis,
+    QgsApplication,
+    QgsMessageLog,
+    QgsWkbTypes,
+)
 from qgis.PyQt.QtCore import Qt
 
 # Initialize Qt resources from file resources.py
@@ -38,7 +45,7 @@ from .resources import *
 from .nopywer_plugin_dialog import NopywerPluginDialog
 from .exporter import NopywerExporter
 from .setup_dependencies import get_venv_python, setup_dependencies
-from .tasks import NopywerAnalysisTask
+from .tasks import NopywerAnalysisTask, NopywerOptimizeTask
 from qgis.core import QgsApplication
 from .utils import log_message
 
@@ -208,8 +215,8 @@ class NopywerPlugin:
             self.dlg.btnRefresh.clicked.connect(self.npw_refresh_lib)
 
         # --- Populate the lists of layers ---
-        self.populate_layer_list(self.dlg.listNodes)
-        self.populate_layer_list(self.dlg.listCables)
+        self.populate_layer_list(self.dlg.listNodes, self._is_point_layer)
+        self.populate_layer_list(self.dlg.listCables, self._is_line_layer)
         # -------------------------------------------------------
 
         # Show the dialog
@@ -220,18 +227,36 @@ class NopywerPlugin:
         if result:
             pass
 
-    def populate_layer_list(self, list_widget):
-        """Helper to populate a QListWidget with vector layers."""
-        # list_widget.clear()  # do not clear selection each time the plugin is reopened
+    def populate_layer_list(self, list_widget, filter_func=None):
+        """Helper to populate a QListWidget with vector layers.
+
+        Args:
+            list_widget: QListWidget to populate
+            filter_func: Optional function to filter layers. If provided, only layers
+                        where filter_func(layer) returns True will be added.
+        """
         layers = sorted(
             QgsProject.instance().mapLayers().values(), key=lambda layer: layer.name()
         )
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):
-                list_widget.addItem(layer.name())
-                # Store the unique layer ID invisibly
-                item = list_widget.item(list_widget.count() - 1)
-                item.setData(Qt.UserRole, layer.id())
+                if filter_func is None or filter_func(layer):
+                    list_widget.addItem(layer.name())
+                    # Store the unique layer ID invisibly
+                    item = list_widget.item(list_widget.count() - 1)
+                    item.setData(Qt.UserRole, layer.id())
+
+    @staticmethod
+    def _is_point_layer(layer):
+        """Check if a layer contains point or multipoint geometries."""
+        geom_type = layer.geometryType()
+        return geom_type == QgsWkbTypes.PointGeometry
+
+    @staticmethod
+    def _is_line_layer(layer):
+        """Check if a layer contains line or multiline geometries."""
+        geom_type = layer.geometryType()
+        return geom_type == QgsWkbTypes.LineGeometry
 
     def get_selected_layers(self, list_widget):
         """Helper to get actual layer objects from selected list items."""
@@ -302,12 +327,66 @@ class NopywerPlugin:
         )
 
     def npw_optimize(self):
-        log_message("Optimization is not implemented yet", Qgis.Warning)
+        """This function triggers when the Optimize button is clicked."""
+        load_layers = self.get_selected_layers(self.dlg.listNodes)
+        cable_layers = self.get_selected_layers(self.dlg.listCables)
+        log_message(f"Selected load layers: {[l.name() for l in load_layers]}")
+        log_message(f"Selected cable layers: {[l.name() for l in cable_layers]}")
+        self.run_optimization(load_layers, cable_layers)
+
+    def run_optimization(self, load_layers, cable_layers):
+        """Run the optimization process."""
+        log_message(
+            f"Optimization triggered with {len(load_layers)} load layer(s) and {len(cable_layers)} cable layer(s)"
+        )
+
+        # 0. Get power unit multiplier
+        unit = self.dlg.cmbPowerUnits.currentText()
+        scale = 1000.0  # Default kW
+        if unit == "W":
+            scale = 1.0
+        elif unit == "MW":
+            scale = 1000000.0
+        log_message(f"Using power scale factor: {scale} (selected unit: {unit})")
+
+        # 1. Preview and Export to GeoJSON
+        paths = self.exporter.run_preview(
+            load_layers, cable_layers, power_units_scale=scale
+        )
+
+        if not paths:
+            log_message("Export failed, no GeoJSON path returned.", Qgis.Warning)
+            self.iface.messageBar().pushMessage(
+                "Nopywer", "No valid layers selected for optimization.", Qgis.Warning
+            )
+            return
+
+        geojson_in, geojson_out = paths
+
+        # 2. Setup Task
+        python_exe = get_venv_python()
+        task = NopywerOptimizeTask(
+            "Nopywer Grid Optimization", python_exe, geojson_in, geojson_out
+        )
+
+        # 3. Start Task
+        self.running_tasks.append(task)
+        task.taskCompleted.connect(
+            lambda: self.running_tasks.remove(task)
+            if task in self.running_tasks
+            else None
+        )
+
+        QgsApplication.taskManager().addTask(task)
+        self.iface.messageBar().pushMessage(
+            "Nopywer", "Optimization started in background...", Qgis.Info
+        )
 
     def npw_export(self):
         log_message("Export button has no effect yet", Qgis.Warning)
 
     def npw_test(self):
+        clear_log()
         log_message("Running test procedure...")
         layer_names_load = ["test_nodes"]
         layer_names_cable = [
