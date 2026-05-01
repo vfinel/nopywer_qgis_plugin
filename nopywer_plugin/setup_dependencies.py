@@ -6,7 +6,8 @@ import shutil
 
 def get_venv_path():
     """Returns the absolute path to the virtual environment folder."""
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".venv"))
+    root_folder = os.path.dirname(os.path.dirname(__file__))
+    return os.path.abspath(os.path.join(root_folder, ".venv"))
 
 
 def get_venv_python():
