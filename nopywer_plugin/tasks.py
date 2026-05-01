@@ -30,26 +30,18 @@ class NopywerAnalysisTask(QgsTask):
             env.pop("PYTHONPATH", None)
             env.pop("PYTHONHOME", None)
 
-            # Determine the path to the nopywer-analyze executable
-            executable_dir = os.path.dirname(self.python_exe)
-            analyze_exe = os.path.join(executable_dir, "nopywer-analyze")
-            if os.name == "nt":
-                analyze_exe += ".exe"
-
-            log_message(f"Executing command: {analyze_exe} {self.input_geojson}")
-
-            # Check if the executable exists
-            if not os.path.exists(analyze_exe):
-                raise Exception(f"Analysis tool not found: {analyze_exe}")
-
-            # Run nopywer-analyze -v <input_geojson>
+            # Run nopywer-analyze via python
             cmd = [
-                analyze_exe,
+                self.python_exe,
+                "-m",
+                "nopywer.cli",
                 "-v",
                 self.input_geojson,
                 "-o",  # this prevents to print to geojson in the console
                 self.output_geojson,
             ]
+
+            log_message(f"Executing command: {cmd} ")
 
             process = subprocess.Popen(
                 cmd,

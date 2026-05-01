@@ -2,19 +2,27 @@ This is a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) direct
 
 # installation 
 - Open QGIS.
-- Go to Plugins > Manage and Install Plugins... > Settings > "Plugin Repositories" > Add....
-    - Name it whatever you like (e.g., "Nopywer Release Repo").
+- Add nopywer plugin repositoey to QGIS Plugin Manager: Go to: *Plugins > Manage and Install Plugins... > Settings > "Plugin Repositories" > Add...*
+    - Choose a name (e.g., "Nopywer Release Repo").
     - For the URL, paste this exact link: https://github.com/vfinel/nopywer_qgis_plugin/releases/latest/download/plugins.xml
         - /!\ make sure to remove the `http://` prefix already written, you need `https://` instead
         - if you see the message `Unable to Get Local Issuer Certificate: The issuer certificate of a locally looked up certificate could not be found` you can click `Ignore`
-    - close the `Settings` panel 
 
-- Go to Plugins > Manage and Install Plugins... > All
-    - search for `nopywer` plugin and install it 
+- Go to: *Plugins > Manage and Install Plugins... > All*
+    - search for `nopywer` plugin 
+    - install it 
+    
+    Note that the installation can take some time (about 1 minute), and multiple command windows may open. **Do not attempt to interact with QGIS during the installaton.**
+
 
 # usage 
 
-## prepapre your layers 
+Once the installation is complete, you are ready to use nopywer!
+ You can click on the nopywer plugin icon ![Nopywer Icon](nopywer_plugin/icon.png)
+
+You can also open the plugin by going on *Plugins > nopywer*.
+
+## prepare your layers 
 Make sure that your layers have the following properties:
 - each features of nodes layers must have the following attributes:
     - `name`: a string describing the name of the load 
