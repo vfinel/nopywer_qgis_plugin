@@ -14,8 +14,25 @@ except (ImportError, ValueError):
 
 
 def get_venv_path():
-    """Returns the absolute path to the virtual environment folder."""
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".venv"))
+    """Returns the absolute path to the virtual environment folder.
+
+    This is stored OUTSIDE the plugin directory to prevent QGIS from scanning it
+    as a data source, which would cause crashes and errors.
+    """
+    # Use QGIS config directory or fallback to home
+    if sys.platform == "win32":
+        # Windows: use AppData\Roaming\nopywer
+        base_dir = os.path.join(
+            os.path.expanduser("~"), "AppData", "Roaming", "nopywer"
+        )
+    else:
+        # Linux/Mac: use ~/.nopywer
+        base_dir = os.path.join(os.path.expanduser("~"), ".nopywer")
+
+    venv_path = os.path.abspath(os.path.join(base_dir, "venv"))
+    print(f"{venv_path=}")
+
+    return venv_path
 
 
 def get_venv_python():
@@ -73,6 +90,10 @@ def setup_dependencies(force=False, clean=False):
         plugin_dir = os.path.abspath(os.path.dirname(__file__))
         venv_path = get_venv_path()
         uv_path = find_uv()
+
+        # Create parent directory for venv if it doesn't exist
+        venv_parent = os.path.dirname(venv_path)
+        os.makedirs(venv_parent, exist_ok=True)
 
         # Isolate environment
         env = os.environ.copy()
