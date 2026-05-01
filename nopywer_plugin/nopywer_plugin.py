@@ -386,7 +386,6 @@ class NopywerPlugin:
         log_message("Export button has no effect yet", Qgis.Warning)
 
     def npw_test(self):
-        clear_log()
         log_message("Running test procedure...")
         layer_names_load = ["test_nodes"]
         layer_names_cable = [
