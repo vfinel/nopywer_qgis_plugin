@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>368</width>
-    <height>542</height>
+    <width>372</width>
+    <height>551</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QPushButton" name="btnRefresh">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>360</y>
+     <x>230</x>
+     <y>390</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -33,7 +33,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>40</y>
+     <y>80</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -58,8 +58,8 @@
   <widget class="QPushButton" name="btnTest">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>330</y>
+     <x>230</x>
+     <y>360</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -72,7 +72,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>20</y>
+     <y>40</y>
      <width>181</width>
      <height>381</height>
     </rect>
@@ -111,8 +111,8 @@
   <widget class="QComboBox" name="cmbPowerUnits">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>250</y>
+     <x>230</x>
+     <y>280</y>
      <width>101</width>
      <height>22</height>
     </rect>
@@ -136,8 +136,8 @@
   <widget class="QLabel" name="label_power_units">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>230</y>
+     <x>230</x>
+     <y>260</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -149,8 +149,8 @@
   <widget class="QLabel" name="label_developers">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>310</y>
+     <x>230</x>
+     <y>340</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -163,7 +163,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>20</y>
+     <y>60</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -172,38 +172,57 @@
     <string>nopywer actions</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QLabel" name="label_select_power_grid">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>10</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Select one power grid to work with:</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btnOptimize">
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>110</y>
-     <width>95</width>
-     <height>88</height>
+     <y>160</y>
+     <width>75</width>
+     <height>23</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
-     <widget class="QLabel" name="label_experimental">
-      <property name="text">
-       <string>Experimental :</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnOptimize">
-      <property name="text">
-       <string>Optimize grid</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnExport">
-      <property name="text">
-       <string>to geoJSON</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
+   <property name="text">
+    <string>Optimize grid</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_experimental">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>140</y>
+     <width>64</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Experimental</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btnExport">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>190</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>to geoJSON</string>
+   </property>
   </widget>
  </widget>
  <resources/>
