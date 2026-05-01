@@ -38,7 +38,7 @@ from .resources import *
 from .nopywer_plugin_dialog import NopywerPluginDialog
 from .exporter import NopywerExporter
 from .setup_dependencies import get_venv_python, setup_dependencies
-from .tasks import NopywerAnalysisTask
+from .tasks import NopywerAnalysisTask, NopywerOptimizeTask
 from qgis.core import QgsApplication
 from .utils import log_message
 
@@ -302,12 +302,66 @@ class NopywerPlugin:
         )
 
     def npw_optimize(self):
-        log_message("Optimization is not implemented yet", Qgis.Warning)
+        """This function triggers when the Optimize button is clicked."""
+        load_layers = self.get_selected_layers(self.dlg.listNodes)
+        cable_layers = self.get_selected_layers(self.dlg.listCables)
+        log_message(f"Selected load layers: {[l.name() for l in load_layers]}")
+        log_message(f"Selected cable layers: {[l.name() for l in cable_layers]}")
+        self.run_optimization(load_layers, cable_layers)
+
+    def run_optimization(self, load_layers, cable_layers):
+        """Run the optimization process."""
+        log_message(
+            f"Optimization triggered with {len(load_layers)} load layer(s) and {len(cable_layers)} cable layer(s)"
+        )
+
+        # 0. Get power unit multiplier
+        unit = self.dlg.cmbPowerUnits.currentText()
+        scale = 1000.0  # Default kW
+        if unit == "W":
+            scale = 1.0
+        elif unit == "MW":
+            scale = 1000000.0
+        log_message(f"Using power scale factor: {scale} (selected unit: {unit})")
+
+        # 1. Preview and Export to GeoJSON
+        paths = self.exporter.run_preview(
+            load_layers, cable_layers, power_units_scale=scale
+        )
+
+        if not paths:
+            log_message("Export failed, no GeoJSON path returned.", Qgis.Warning)
+            self.iface.messageBar().pushMessage(
+                "Nopywer", "No valid layers selected for optimization.", Qgis.Warning
+            )
+            return
+
+        geojson_in, geojson_out = paths
+
+        # 2. Setup Task
+        python_exe = get_venv_python()
+        task = NopywerOptimizeTask(
+            "Nopywer Grid Optimization", python_exe, geojson_in, geojson_out
+        )
+
+        # 3. Start Task
+        self.running_tasks.append(task)
+        task.taskCompleted.connect(
+            lambda: self.running_tasks.remove(task)
+            if task in self.running_tasks
+            else None
+        )
+
+        QgsApplication.taskManager().addTask(task)
+        self.iface.messageBar().pushMessage(
+            "Nopywer", "Optimization started in background...", Qgis.Info
+        )
 
     def npw_export(self):
         log_message("Export button has no effect yet", Qgis.Warning)
 
     def npw_test(self):
+        clear_log()
         log_message("Running test procedure...")
         layer_names_load = ["test_nodes"]
         layer_names_cable = [
