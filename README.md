@@ -13,11 +13,24 @@ This is a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) direct
     - search for `nopywer` plugin and install it 
 
 # usage 
+
+## prepapre your layers 
+Make sure that your layers have the following properties:
+- each features of nodes layers must have the following attributes:
+    - `name`: a string describing the name of the load 
+    - `power`: power usage of this node (it can be 0 if the node is not using power. Units can be in watts, kilowatts, or megawatts)
+    - `phase`: the phase this node should draw power from (1, 2, 3, or T)
+
+## run analysis 
+- open the plugin 
+- select your layers (nodes layer(s) and cable layer(s))
+- click "Run analysis" 
+
 ## see nopywer logs 
 Logs are visible in two places: 
-- QGIS Python Console: It will print a formatted block with the nopywer output.
 - Log Messages Panel: Go to View -> Panels -> Log Messages (or click the speech bubble in the bottom right corner of QGIS) and select the "Nopywer" tab.
+- QGIS Python Console: It will print a formatted block with the nopywer output.
 
 This will show you exactly what nopywer is calculating, any warnings it generates, and the final result!
 
-# refresh 
+
