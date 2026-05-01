@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>370</y>
+     <y>360</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -46,7 +46,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>100</y>
+     <y>80</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -55,7 +55,7 @@
     <string>Optimize grid</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_3">
+  <widget class="QLabel" name="label_logs">
    <property name="geometry">
     <rect>
      <x>20</x>
@@ -85,7 +85,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>150</y>
+     <y>120</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -138,7 +138,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>260</y>
+     <y>190</y>
      <width>101</width>
      <height>22</height>
     </rect>
@@ -159,17 +159,43 @@
     </property>
    </item>
   </widget>
-  <widget class="QLabel" name="label_4">
+  <widget class="QLabel" name="label_power_units">
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>240</y>
+     <y>170</y>
      <width>179</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
     <string>Power units</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_developers">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>310</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Developer tools</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_actions">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>20</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>nopywer actions</string>
    </property>
   </widget>
  </widget>
