@@ -122,37 +122,60 @@ def setup_dependencies(force=False, clean=False):
                 return False
 
         venv_python = get_venv_python()
-        uv_exe = get_venv_uv()
+        print(f"{venv_python=}")
 
-        # --- STEP 3: INSTALL UV (Via native pip) ---
-        if not os.path.exists(uv_exe):
-            log_message("Bootstrapping 'uv' package manager inside venv...")
-            try:
-                result = subprocess.run(
-                    [venv_python, "-m", "pip", "install", "uv"],
-                    capture_output=True,
-                    text=True,
-                    cwd=plugin_dir,
-                    env=env,
+        # --- STEP 3: INSTALL UV (Via qgis_python's pip with --target) ---
+        # Determine site-packages path
+        if sys.platform == "win32":
+            site_packages = os.path.join(venv_path, "Lib", "site-packages")
+        else:
+            py_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+            site_packages = os.path.join(venv_path, "lib", py_version, "site-packages")
+
+        os.makedirs(site_packages, exist_ok=True)
+
+        log_message("Installing 'uv' package manager to venv...")
+        try:
+            result = subprocess.run(
+                [qgis_python, "-m", "pip", "install", "--target", site_packages, "uv"],
+                capture_output=True,
+                text=True,
+                cwd=plugin_dir,
+                env=env,
+            )
+            if result.returncode != 0:
+                log_message(
+                    f"Failed to install uv. STDOUT: {result.stdout} STDERR: {result.stderr}"
                 )
-                if result.returncode != 0:
-                    log_message(
-                        f"Failed to install uv. STDOUT: {result.stdout} STDERR: {result.stderr}"
-                    )
-                    return False
-            except Exception as e:
-                log_message(f"Failed to install uv: {e}")
                 return False
+            log_message("Successfully installed uv")
+        except Exception as e:
+            log_message(f"Failed to install uv: {e}")
+            return False
 
         # --- STEP 4: VERIFY NOPYWER STATUS ---
         if not force:
             try:
                 # CRITICAL FIX: We must check nopywer.cli to ensure it's not a broken/empty folder
+                # Add venv site-packages to PYTHONPATH to check
+                if sys.platform == "win32":
+                    site_packages = os.path.join(venv_path, "Lib", "site-packages")
+                else:
+                    py_version = (
+                        f"python{sys.version_info.major}.{sys.version_info.minor}"
+                    )
+                    site_packages = os.path.join(
+                        venv_path, "lib", py_version, "site-packages"
+                    )
+
+                check_env = os.environ.copy()
+                check_env["PYTHONPATH"] = site_packages
+
                 result = subprocess.run(
                     [venv_python, "-c", "import nopywer.cli"],
                     capture_output=True,
                     text=True,
-                    env=env,
+                    env=check_env,
                 )
                 if result.returncode == 0:
                     return True  # It's fully installed and working!
@@ -167,18 +190,18 @@ def setup_dependencies(force=False, clean=False):
                 log_message(f"nopywer verification exception: {e}")
                 log_message("nopywer missing or incomplete. Proceeding to install...")
 
-        # --- STEP 5: INSTALL NOPYWER (Via blazing fast uv) ---
+        # --- STEP 5: INSTALL NOPYWER (Via fast uv) ---
         branch = "qgis_plugin"
         zip_url = f"https://github.com/vfinel/nopywer/archive/refs/heads/{branch}.zip"
 
         log_message(f"Installing nopywer from branch '{branch}' using uv...")
 
         cmd = [
-            uv_exe,
+            venv_python,
+            "-m",
+            "uv",
             "pip",
             "install",
-            "--python",
-            venv_python,
             "--force-reinstall",
             zip_url,
         ]
