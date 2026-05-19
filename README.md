@@ -1,4 +1,5 @@
-This is a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) directly inside QGIS.
+`nopywer-qgis-plugin` a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) directly inside QGIS 
+
 
 # installation 
 - Open QGIS.
@@ -18,7 +19,7 @@ This is a QGIS plugin to use [nopywer](https://github.com/vfinel/nopywer) direct
 # usage 
 
 Once the installation is complete, you are ready to use nopywer!
- You can click on the nopywer plugin icon ![Nopywer Icon](nopywer_plugin/icon.png)
+You can click on the nopywer plugin icon ![Nopywer Icon](nopywer_plugin/icon.png)
 
 You can also open the plugin by going on *Plugins > nopywer*.
 
@@ -27,7 +28,7 @@ Make sure that your layers have the following properties:
 - each features of nodes layers must have the following attributes:
     - `name`: a string describing the name of the load 
     - `power`: power usage of this node (it can be 0 if the node is not using power. Units can be in watts, kilowatts, or megawatts)
-    - `phase`: the phase this node should draw power from (1, 2, 3, or T)
+    - `phase`: the phase this node should draw power from ("1", "2", "3", or any combinaison of those: "1,2,3" to split equally on 3-phases, "1,2" to split on 2-phases, etc.)
 
 ## run analysis 
 - open the plugin 
@@ -39,6 +40,12 @@ Logs are visible in two places:
 - Log Messages Panel: Go to View -> Panels -> Log Messages (or click the speech bubble in the bottom right corner of QGIS) and select the "Nopywer" tab.
 - QGIS Python Console: Go to Plugins -> Python console (or Ctrl + Alt + P)
 
-This will show you exactly what nopywer is calculating, any warnings it generates, and the final result!
+This will show you exactly what nopywer is calculating, any warnings it generates, and the final result.
 
+
+# update the plugin 
+- Go to *Plugins > Manage and install plugins...*
+- Go to the `Installed` tab
+- Search for `nopywer`
+- Click upgrade 
 

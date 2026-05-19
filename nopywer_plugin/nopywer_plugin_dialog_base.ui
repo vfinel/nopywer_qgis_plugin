@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>372</width>
-    <height>551</height>
+    <width>501</width>
+    <height>542</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QPushButton" name="btnRefresh">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>390</y>
+     <x>250</x>
+     <y>380</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -32,9 +32,9 @@
   <widget class="QPushButton" name="btnAnalysis">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>80</y>
-     <width>93</width>
+     <x>260</x>
+     <y>50</y>
+     <width>121</width>
      <height>28</height>
     </rect>
    </property>
@@ -45,8 +45,8 @@
   <widget class="QLabel" name="label_logs">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>430</y>
+     <x>70</x>
+     <y>460</y>
      <width>331</width>
      <height>51</height>
     </rect>
@@ -58,8 +58,8 @@
   <widget class="QPushButton" name="btnTest">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>360</y>
+     <x>250</x>
+     <y>350</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -111,9 +111,9 @@
   <widget class="QComboBox" name="cmbPowerUnits">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>280</y>
-     <width>101</width>
+     <x>260</x>
+     <y>290</y>
+     <width>121</width>
      <height>22</height>
     </rect>
    </property>
@@ -136,8 +136,8 @@
   <widget class="QLabel" name="label_power_units">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>260</y>
+     <x>260</x>
+     <y>270</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -149,8 +149,8 @@
   <widget class="QLabel" name="label_developers">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>340</y>
+     <x>250</x>
+     <y>330</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -162,8 +162,8 @@
   <widget class="QLabel" name="label_actions">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>60</y>
+     <x>250</x>
+     <y>30</y>
      <width>179</width>
      <height>16</height>
     </rect>
@@ -177,8 +177,8 @@
     <rect>
      <x>20</x>
      <y>10</y>
-     <width>179</width>
-     <height>16</height>
+     <width>201</width>
+     <height>21</height>
     </rect>
    </property>
    <property name="text">
@@ -188,9 +188,9 @@
   <widget class="QPushButton" name="btnOptimize">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>160</y>
-     <width>75</width>
+     <x>260</x>
+     <y>120</y>
+     <width>121</width>
      <height>23</height>
     </rect>
    </property>
@@ -201,9 +201,9 @@
   <widget class="QLabel" name="label_experimental">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>140</y>
-     <width>64</width>
+     <x>260</x>
+     <y>100</y>
+     <width>91</width>
      <height>16</height>
     </rect>
    </property>
@@ -214,14 +214,60 @@
   <widget class="QPushButton" name="btnExport">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>190</y>
-     <width>75</width>
+     <x>260</x>
+     <y>150</y>
+     <width>121</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
     <string>to geoJSON</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="cmbAnalyzer">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>240</y>
+     <width>121</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>tree walk</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>symmetric pandapower</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="label_parameters">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>200</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Parameters</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_analyzer">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>220</y>
+     <width>179</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Analyzer</string>
    </property>
   </widget>
  </widget>

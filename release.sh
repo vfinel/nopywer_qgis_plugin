@@ -5,6 +5,8 @@ USAGE:
 ./release.sh 0.2.4
 ./release.sh v0.2.4
 ./release.sh 0.2.4 "Custom commit message"
+
+You are supposed to be on `main`branch to create a release !
 """
 
 # Exit immediately if a command exits with a non-zero status
