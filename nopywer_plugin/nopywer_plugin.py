@@ -281,7 +281,7 @@ class NopywerPlugin:
             f"npw_analysis triggered with {len(load_layers)} load layer(s) and {len(cable_layers)} cable layer(s)"
         )
 
-        # 0. Get power unit multiplier
+        # 0.1 Get power unit multiplier
         unit = self.dlg.cmbPowerUnits.currentText()
         scale = 1000.0  # Default kW
         if unit == "W":
@@ -289,6 +289,10 @@ class NopywerPlugin:
         elif unit == "MW":
             scale = 1000000.0
         log_message(f"Using power scale factor: {scale} (selected unit: {unit})")
+
+        # 0.2 get engine
+        engine = self.dlg.cmbAnalyzer.currentText()
+        log_message(f"Selected engine: {engine}")
 
         # 1. Preview and Export to GeoJSON
         paths = self.exporter.run_preview(
@@ -307,7 +311,11 @@ class NopywerPlugin:
         # 2. Setup Task
         python_exe = get_venv_python()
         task = NopywerAnalysisTask(
-            "Nopywer Grid Analysis", python_exe, geojson_in, geojson_out
+            "Nopywer Grid Analysis",
+            python_exe,
+            geojson_in,
+            geojson_out,
+            engine,
         )
 
         # 3. Start Task

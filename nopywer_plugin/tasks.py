@@ -10,13 +10,22 @@ from .utils import log_message
 
 
 class NopywerAnalysisTask(QgsTask):
-    def __init__(self, description, python_exe, input_geojson, output_geojson):
+    def __init__(self, description, python_exe, input_geojson, output_geojson, engine):
         super().__init__(description, QgsTask.CanCancel)
         self.python_exe = python_exe
         self.input_geojson = input_geojson
         self.output_geojson = output_geojson
         self.exception = None
         self.output_data = None
+
+        if engine == "tree walk":
+            self.engine = "tree_walk"
+
+        elif engine == "symmetric pandapower":
+            self.engine = "pandapower"
+
+        else:
+            raise ValueError(f"Unknown engine selected: {engine}")
 
     def run(self):
         """
@@ -35,6 +44,8 @@ class NopywerAnalysisTask(QgsTask):
                 self.python_exe,
                 "-m",
                 "nopywer.cli",
+                "-e",
+                self.engine,
                 "-v",
                 self.input_geojson,
                 "-o",  # this prevents to print to geojson in the console
