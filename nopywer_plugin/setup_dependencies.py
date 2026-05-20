@@ -15,7 +15,7 @@ except (ImportError, ValueError):
 
 # Nopywer version to download and install
 # UPDATE THIS WHEN RELEASING A NEW NOPYWER VERSION
-NOPYWER_VERSION = "0.2.0"
+NOPYWER_VERSION = "0.2.1"
 
 
 def write_to_log_file(msg):
