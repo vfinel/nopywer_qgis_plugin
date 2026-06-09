@@ -18,11 +18,11 @@ class NopywerAnalysisTask(QgsTask):
         self.exception = None
         self.output_data = None
 
-        if engine == "tree walk":
+        if engine == "nopywer":
             self.engine = "tree_walk"
 
-        elif engine == "symmetric pandapower":
-            self.engine = "pandapower"
+        elif engine == "pandapower":
+            self.engine = "asymmetric"
 
         else:
             raise ValueError(f"Unknown engine selected: {engine}")
@@ -46,6 +46,8 @@ class NopywerAnalysisTask(QgsTask):
                 "nopywer.cli",
                 "-e",
                 self.engine,
+                "--load-factor",
+                1,
                 "-v",
                 self.input_geojson,
                 "-o",  # this prevents to print to geojson in the console

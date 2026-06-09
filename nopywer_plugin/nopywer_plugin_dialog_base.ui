@@ -235,12 +235,12 @@
    </property>
    <item>
     <property name="text">
-     <string>tree walk</string>
+     <string>nopywer</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>symmetric pandapower</string>
+     <string>pandapower</string>
     </property>
    </item>
   </widget>
