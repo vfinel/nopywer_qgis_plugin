@@ -47,7 +47,7 @@ class NopywerAnalysisTask(QgsTask):
                 "-e",
                 self.engine,
                 "--load-factor",
-                1,
+                "1",
                 "-v",
                 self.input_geojson,
                 "-o",  # this prevents to print to geojson in the console
