@@ -3,6 +3,7 @@ import subprocess
 import os
 import shutil
 import traceback
+import configparser
 
 # Attempt to import log_message from .utils
 try:
@@ -13,9 +14,35 @@ except (ImportError, ValueError):
         print(msg)
 
 
-# Nopywer version to download and install
-# UPDATE THIS WHEN RELEASING A NEW NOPYWER VERSION
-NOPYWER_VERSION = "0.3.1"
+def log_message(msg, level=None):
+    """Wrapper that logs to both QGIS message bar and persistent file."""
+    if level is None:
+        level = 0  # 0 corresponds to Qgis.Info in the QGIS API
+    _original_log_message(msg, level)
+    write_to_log_file(msg)
+
+
+def _load_config():
+    """Load nopywer configuration from nopywer.cfg file."""
+    config = configparser.ConfigParser()
+    config_file = os.path.join(os.path.dirname(__file__), "nopywer.cfg")
+
+    # Default values
+    defaults = {"version": "0.3.1", "local_path": ""}
+
+    try:
+        if os.path.exists(config_file):
+            config.read(config_file)
+            if "nopywer" in config:
+                version = config.get("nopywer", "version", fallback=defaults["version"])
+                local_path = config.get(
+                    "nopywer", "local_path", fallback=defaults["local_path"]
+                ).strip()
+                return version, local_path if local_path else None
+    except Exception as e:
+        log_message(f"Warning: Could not read config file {config_file}: {e}")
+
+    return defaults["version"], None
 
 
 def write_to_log_file(msg):
@@ -31,14 +58,6 @@ def write_to_log_file(msg):
             f.write(f"{msg}\n")
     except Exception:
         pass
-
-
-def log_message(msg, level=None):
-    """Wrapper that logs to both QGIS message bar and persistent file."""
-    if level is None:
-        level = 0  # 0 corresponds to Qgis.Info in the QGIS API
-    _original_log_message(msg, level)
-    write_to_log_file(msg)
 
 
 def get_qgis_python_executable():
@@ -140,6 +159,7 @@ def _step_verify_nopywer(venv_python, force, env):
         return False
 
     installed_version = _get_installed_version(venv_python, env)
+    log_message(f"{installed_version=}")
     if installed_version:
         if installed_version == NOPYWER_VERSION:
             log_message(
@@ -157,8 +177,75 @@ def _step_verify_nopywer(venv_python, force, env):
         return False
 
 
+def _validate_local_nopywer(local_path):
+    """Validate that a local nopywer installation exists and is valid.
+
+    Supports both flat layout (nopywer/__init__.py) and src-layout (src/nopywer/__init__.py).
+    Returns the path to add to PYTHONPATH, or None if invalid.
+    """
+    log_message(f"Validating local nopywer at {local_path}")
+    if not local_path or not os.path.isdir(local_path):
+        log_message(f"Invalid NOPYWER_LOCAL_PATH: {local_path} (directory not found)")
+        return None
+
+    # Check if it's a src-layout project: src/nopywer/__init__.py
+    src_nopywer = os.path.join(local_path, "src", "nopywer", "__init__.py")
+    if os.path.isfile(src_nopywer):
+        pythonpath = os.path.join(local_path, "src")
+        log_message(f"✓ Found nopywer package (src-layout) at {local_path}/src")
+        return pythonpath
+
+    # Check if it's a directory containing nopywer/: nopywer/__init__.py
+    nopywer_init = os.path.join(local_path, "nopywer", "__init__.py")
+    if os.path.isfile(nopywer_init):
+        log_message(f"✓ Found nopywer package (flat layout) at {local_path}/nopywer")
+        return local_path
+
+    # Check if the path itself IS the nopywer package: __init__.py
+    if os.path.isfile(os.path.join(local_path, "__init__.py")):
+        log_message(f"✓ Found nopywer package at {local_path}")
+        return local_path
+
+    log_message(f"Invalid local nopywer: no nopywer package found at {local_path}")
+    return None
+
+
+def _step_setup_local_nopywer(local_path, venv_python, env):
+    """STEP 4A: Install local nopywer in editable mode to the venv."""
+    log_message(f"Using local nopywer from: {local_path}")
+
+    pythonpath_to_add = _validate_local_nopywer(local_path)
+    if not pythonpath_to_add:
+        return False
+
+    # Install in editable mode (-e) so it's properly installed in the venv
+    # and all subprocesses can find it
+    install_cmd = [
+        venv_python,
+        "-m",
+        "pip",
+        "install",
+        "-e",
+        pythonpath_to_add,
+    ]
+
+    log_message(f"Installing local nopywer in editable mode...")
+    log_message(f"Running: {' '.join(install_cmd)}")
+    result = subprocess.run(install_cmd, capture_output=True, text=True, env=env)
+
+    if result.returncode != 0:
+        log_message(f"Failed to install local nopywer")
+        log_message(f"STDOUT: {result.stdout}")
+        log_message(f"STDERR: {result.stderr}")
+        return False
+
+    log_message(f"✓ Local nopywer installed in editable mode")
+    log_message(result.stdout)
+    return True
+
+
 def _step_install_wheel(venv_python, plugin_dir, env, force):
-    """STEP 4: Download and install nopywer from pre-built wheel."""
+    """STEP 4B: Download and install nopywer from pre-built wheel."""
     wheel_url = f"https://github.com/vfinel/nopywer/releases/download/v{NOPYWER_VERSION}/nopywer-{NOPYWER_VERSION}-py3-none-any.whl"
 
     log_message(f"Installing nopywer {NOPYWER_VERSION}...")
@@ -189,9 +276,9 @@ def _step_install_wheel(venv_python, plugin_dir, env, force):
     return True
 
 
-def _step_verify_installation(venv_python, env):
+def _step_verify_installation(venv_python, check_env):
     """STEP 5: Final verification that nopywer.cli imports successfully."""
-    result = _check_nopywer_import(venv_python, env)
+    result = _check_nopywer_import(venv_python, check_env)
 
     if result and result.returncode == 0:
         log_message("✓ Successfully installed nopywer!")
@@ -206,13 +293,18 @@ def _step_verify_installation(venv_python, env):
 
 def setup_dependencies(force=False, clean=False):
     """
-    Orchestrates the installation of nopywer from a pre-built wheel.
+    Orchestrates the installation of nopywer from a pre-built wheel or local path.
 
     :param force: If True, forces reinstall of nopywer.
     :param clean: If True, deletes the existing venv entirely first.
     :return: True if successful, False otherwise.
     """
+    log_message("seting up nopywer plugin dependencies...")
     try:
+        # Load configuration from nopywer.cfg
+        global NOPYWER_VERSION
+        NOPYWER_VERSION, NOPYWER_LOCAL_PATH = _load_config()
+
         plugin_dir = os.path.abspath(os.path.dirname(__file__))
         venv_path = get_venv_path()
         qgis_python = get_qgis_python_executable()
@@ -232,15 +324,21 @@ def setup_dependencies(force=False, clean=False):
         venv_python = get_venv_python()
         log_message(f"Using venv Python: {venv_python}")
 
-        # Check if already installed (return early if so)
-        if _step_verify_nopywer(venv_python, force, env):
-            return True
+        # Determine installation method
+        if NOPYWER_LOCAL_PATH:
+            # Using local path: install in editable mode to venv
+            if not _step_setup_local_nopywer(NOPYWER_LOCAL_PATH, venv_python, env):
+                return False
+            check_env = env
+        else:
+            # Using wheel installation: check if already installed, then install
+            if _step_verify_nopywer(venv_python, force, env):
+                return True
+            if not _step_install_wheel(venv_python, plugin_dir, env, force):
+                return False
+            check_env = env
 
-        # Install and verify
-        if not _step_install_wheel(venv_python, plugin_dir, env, force):
-            return False
-
-        return _step_verify_installation(venv_python, env)
+        return _step_verify_installation(venv_python, check_env)
 
     except Exception as e:
         log_message(f"Unexpected error during setup_dependencies: {e}")
