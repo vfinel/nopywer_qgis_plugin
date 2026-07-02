@@ -319,9 +319,10 @@ class NopywerPlugin:
         )
 
         if not paths:
-            log_message("Export failed, no GeoJSON path returned.", Qgis.Warning)
+            push_message = "No valid layers selected for export."
+            log_message(f"\n{push_message}\nExport failed, no GeoJSON path returned.", Qgis.Warning)
             self.iface.messageBar().pushMessage(
-                "Nopywer", "No valid layers selected for export.", Qgis.Warning
+                "Nopywer", push_message, Qgis.Warning
             )
             return
 
