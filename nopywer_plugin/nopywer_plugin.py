@@ -235,16 +235,35 @@ class NopywerPlugin:
             filter_func: Optional function to filter layers. If provided, only layers
                         where filter_func(layer) returns True will be added.
         """
+        # Clear existing items to avoid duplicates when called multiple times
+        log_message(
+            f"Clearing list widget: {list_widget.objectName()}, had {list_widget.count()} items"
+        )
+        list_widget.clear()
+
         layers = sorted(
             QgsProject.instance().mapLayers().values(), key=lambda layer: layer.name()
         )
+        log_message(f"Total layers in project: {len(layers)}")
+
+        added_count = 0
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):
                 if filter_func is None or filter_func(layer):
+                    log_message(f"  Adding layer: {layer.name()} (ID: {layer.id()})")
                     list_widget.addItem(layer.name())
                     # Store the unique layer ID invisibly
                     item = list_widget.item(list_widget.count() - 1)
                     item.setData(Qt.UserRole, layer.id())
+                    added_count += 1
+                else:
+                    log_message(f"  Skipping layer: {layer.name()} (filtered out)")
+            else:
+                log_message(f"  Skipping non-vector layer: {layer.name()}")
+
+        log_message(
+            f"Populated list widget: {list_widget.objectName()}, added {added_count} items (total now: {list_widget.count()} items)"
+        )
 
     @staticmethod
     def _is_point_layer(layer):
@@ -300,9 +319,10 @@ class NopywerPlugin:
         )
 
         if not paths:
-            log_message("Export failed, no GeoJSON path returned.", Qgis.Warning)
+            push_message = "No valid layers selected for export."
+            log_message(f"\n{push_message}\nExport failed, no GeoJSON path returned.", Qgis.Warning)
             self.iface.messageBar().pushMessage(
-                "Nopywer", "No valid layers selected for export.", Qgis.Warning
+                "Nopywer", push_message, Qgis.Warning
             )
             return
 

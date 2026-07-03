@@ -49,3 +49,21 @@ This will show you exactly what nopywer is calculating, any warnings it generate
 - Search for `nopywer`
 - Click upgrade 
 
+# setup nopywer local path for development purposes
+
+To use a local nopywer installation for testing modifications:
+
+1. Open `nopywer_plugin/nopywer.cfg` in a text editor
+2. Find the `local_path` setting under `[nopywer]` section
+3. Set it to your local nopywer path, for example:
+
+```ini
+[nopywer]
+version = 0.3.1
+local_path = <path to local folder>
+```
+
+4. Save the file and restart QGIS
+
+When `local_path` is set, the plugin will use that local version instead of downloading a pre-built wheel. Leave `local_path` empty to use the standard wheel installation.
+
