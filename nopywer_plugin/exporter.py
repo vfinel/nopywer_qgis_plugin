@@ -3,10 +3,11 @@ import json
 import os
 import tempfile
 from qgis.core import (
-    QgsProject, 
-    QgsDistanceArea, 
-    QgsUnitTypes, 
-    QgsCoordinateReferenceSystem, 
+    Qgis,
+    QgsProject,
+    QgsDistanceArea,
+    QgsUnitTypes,
+    QgsCoordinateReferenceSystem,
     QgsCoordinateTransform
 )
 
@@ -26,9 +27,13 @@ class NopywerExporter:
         self.target_crs = QgsCoordinateReferenceSystem(self.target_crs_id)
 
     def validate_layer(self, layer, required_fields):
-        """Returns (is_valid, missing_fields)"""
-        current_fields = [f.name() for f in layer.fields()]
-        missing = [f for f in required_fields if f not in current_fields]
+        """Returns (is_valid, missing_fields).
+
+        Matching is case-insensitive to stay consistent with
+        get_features_as_dict, which lowercases every field name.
+        """
+        current_fields = [f.name().lower() for f in layer.fields()]
+        missing = [f for f in required_fields if f.lower() not in current_fields]
         return len(missing) == 0, missing
 
     def get_features_as_dict(self, layer, is_cable=False, power_units_scale=1.0):
@@ -121,23 +126,49 @@ class NopywerExporter:
         """
         all_features = []
 
+        log_message(
+            f"Exporting {len(load_layers)} load layer(s) and "
+            f"{len(cable_layers)} cable layer(s)"
+        )
+
         # Process Loads
         for layer in load_layers:
-            valid, _ = self.validate_layer(layer, ["name", "power"])
+            valid, missing = self.validate_layer(layer, ["name", "power"])
             if valid:
-                all_features.extend(
-                    self.get_features_as_dict(
-                        layer, is_cable=False, power_units_scale=power_units_scale
-                    )
+                feats = self.get_features_as_dict(
+                    layer, is_cable=False, power_units_scale=power_units_scale
+                )
+                log_message(f" [OK] load layer '{layer.name()}': {len(feats)} feature(s)")
+                all_features.extend(feats)
+            else:
+                present = [f.name() for f in layer.fields()]
+                log_message(
+                    f" [SKIP] load layer '{layer.name()}' missing required field(s) "
+                    f"{missing}. Fields present: {present}",
+                    Qgis.Warning,
                 )
 
         # Process Cables
         for layer in cable_layers:
-            valid, _ = self.validate_layer(layer, ["area", "plugs&sockets"])
+            valid, missing = self.validate_layer(layer, ["area", "plugs&sockets"])
             if valid:
-                all_features.extend(self.get_features_as_dict(layer, is_cable=True))
+                feats = self.get_features_as_dict(layer, is_cable=True)
+                log_message(f" [OK] cable layer '{layer.name()}': {len(feats)} feature(s)")
+                all_features.extend(feats)
+            else:
+                present = [f.name() for f in layer.fields()]
+                log_message(
+                    f" [SKIP] cable layer '{layer.name()}' missing required field(s) "
+                    f"{missing}. Fields present: {present}",
+                    Qgis.Warning,
+                )
 
         if not all_features:
+            log_message(
+                "No features exported: no selected layer passed validation "
+                "(see [SKIP] lines above for missing fields).",
+                Qgis.Warning,
+            )
             return None
 
         # Create the FeatureCollection
